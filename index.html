@@ -6,11 +6,12 @@ import {
   Box, BarChart3, Factory, ShieldCheck,
   Layers, Wrench, Settings2, History, PenTool,
   AlertTriangle, UserCircle, RefreshCw,
-  TableProperties, FileClock, Filter, KeyRound, LogOut
+  TableProperties, FileClock, Filter, KeyRound, LogOut,
+  X, ChevronRight, Info
 } from 'lucide-react';
 
 // === GANTI URL INI DENGAN URL WEB APP GOOGLE SCRIPT ANDA ===
-const API_URL = "https://script.google.com/macros/s/AKfycbx5DlOvMjj9o3TyzEeKU9Yxvtmnx9oDuRrbAZa8kQLZGsjOo2siuKVk7qjrX9ZdZGhfeA/exec"; 
+const API_URL = "https://script.google.com/macros/s/AKfycbxt9r8XxGB3tVp8YiSTt3LzV1vDQM1M9dCxy3XjNPeV9k3fmmM9HP7oRwbDPIz8lh51nQ/exec"; 
 
 const getWeekNumber = (date) => {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -104,11 +105,12 @@ const FloatingInput = ({ label, type = 'text', value, onChange, placeholder, min
   </div>
 );
 
-const ModernSelect = ({ label, value, onChange, options }) => (
+const ModernSelect = ({ label, value, onChange, options, required }) => (
   <div className="relative group w-full mb-4">
     <select
       value={value}
       onChange={onChange}
+      required={required}
       className="block w-full px-4 pt-6 pb-2 text-base font-semibold text-slate-900 bg-white border border-slate-200 rounded-2xl appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all peer shadow-sm"
     >
       <option value="" disabled className="text-slate-400">Pilih...</option>
@@ -195,7 +197,6 @@ const CustomWeekSearch = ({ value, onChange }) => {
 };
 
 const Layout = ({ children, activeTab, setActiveTab, user, onLogout, isSyncing, handleSync }) => {
-  // Viewer tidak melihat tab Stock (Opname)
   let tabs = ['dashboard', 'stock', 'recap', 'bulky', 'maintenance'];
   if (user?.role === 'viewer') {
     tabs = ['dashboard', 'recap', 'bulky', 'maintenance'];
@@ -995,17 +996,18 @@ const BulkyForm = ({ user, logs, onSave }) => {
   const [filterWeek, setFilterWeek] = useState(currentWeekNumber.toString());
   const [filterDay, setFilterDay] = useState('all');
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedMerkRecap, setSelectedMerkRecap] = useState(null); // State for modal
 
   const [formData, setFormData] = useState({
     tanggal: autoDate, shift: autoShift, 
-    noBulky: '', merk: '',
+    noBulky: '', merk: '', tujuanSilo: '',
     jamMasuk: '', jamRelease: '', jamBongkar: '', jamSelesai: '',
     qtyAwal: '', qtyAkhir: ''
   });
 
   const handleAddLog = async (e) => {
     e.preventDefault();
-    if(!formData.noBulky || !formData.merk) return;
+    if(!formData.noBulky || !formData.merk || !formData.tujuanSilo) return;
     setIsSaving(true);
     
     const newLog = {
@@ -1016,7 +1018,12 @@ const BulkyForm = ({ user, logs, onSave }) => {
     
     await onSave({ action: 'saveBulky', payload: newLog });
     
-    setFormData(prev => ({...prev, noBulky: '', merk: '', jamMasuk: '', jamRelease: '', jamBongkar: '', jamSelesai: '', qtyAwal: '', qtyAkhir: ''}));
+    setFormData(prev => ({
+      ...prev, 
+      noBulky: '', merk: '', tujuanSilo: '', 
+      jamMasuk: '', jamRelease: '', jamBongkar: '', jamSelesai: '', 
+      qtyAwal: '', qtyAkhir: ''
+    }));
     setIsSaving(false);
   };
   
@@ -1033,10 +1040,12 @@ const BulkyForm = ({ user, logs, onSave }) => {
       if (weekMatches && dayMatches) {
         const merk = log.merk.toUpperCase();
         const susut = (Number(log.qtyAwal) || 0) - (Number(log.qtyAkhir) || 0);
-        if (!recap[merk]) recap[merk] = { totalAwal: 0, totalSusut: 0, count: 0 };
+        if (!recap[merk]) recap[merk] = { totalAwal: 0, totalSusut: 0, count: 0, logs: [] };
+        
         recap[merk].totalAwal += (Number(log.qtyAwal) || 0);
         recap[merk].totalSusut += susut;
         recap[merk].count += 1;
+        recap[merk].logs.push(log); // Store raw log for detailed view
       }
     });
     return recap;
@@ -1064,6 +1073,74 @@ const BulkyForm = ({ user, logs, onSave }) => {
 
   return (
     <div className="space-y-6 animate-fade-in pb-8">
+      
+      {/* Modal Rincian Bulky */}
+      {selectedMerkRecap && recapData[selectedMerkRecap] && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 animate-fade-in" 
+          onClick={() => setSelectedMerkRecap(null)}
+        >
+          <div 
+            className="bg-[#F4F7F9] w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" 
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-white sticky top-0 z-10">
+              <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
+                <Truck size={18} className="text-blue-600"/> Rincian: {selectedMerkRecap}
+              </h3>
+              <button onClick={() => setSelectedMerkRecap(null)} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto space-y-3">
+               {recapData[selectedMerkRecap].logs.map(log => (
+                 <div key={log.id} className="bg-white border border-slate-200 shadow-sm rounded-2xl p-4">
+                    <div className="flex justify-between items-start mb-3">
+                       <div>
+                          <div className="font-black text-slate-800 text-base">{log.noBulky}</div>
+                          <div className="text-[10px] font-bold text-slate-500">{formatDate(log.tanggal)} • Shift {log.shift}</div>
+                       </div>
+                       <Badge variant="primary">{log.tujuanSilo || 'Tidak ada data'}</Badge>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-center text-xs bg-slate-50 rounded-xl p-2 mb-3 border border-slate-100">
+                       <div>
+                          <div className="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Masuk</div>
+                          <div className="font-semibold text-slate-700">{log.jamMasuk || '-'}</div>
+                       </div>
+                       <div>
+                          <div className="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Release</div>
+                          <div className="font-semibold text-slate-700">{log.jamRelease || '-'}</div>
+                       </div>
+                       <div>
+                          <div className="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Bongkar</div>
+                          <div className="font-semibold text-slate-700">{log.jamBongkar || '-'}</div>
+                       </div>
+                       <div>
+                          <div className="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Selesai</div>
+                          <div className="font-semibold text-slate-700">{log.jamSelesai || '-'}</div>
+                       </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center border-t border-slate-100 pt-3">
+                       <div>
+                          <div className="text-[9px] text-slate-400 font-bold uppercase">Awal</div>
+                          <div className="font-black text-slate-700">{log.qtyAwal} <span className="text-[9px] font-medium opacity-50">kg</span></div>
+                       </div>
+                       <div className="border-l border-r border-slate-100">
+                          <div className="text-[9px] text-slate-400 font-bold uppercase">Akhir</div>
+                          <div className="font-black text-slate-700">{log.qtyAkhir} <span className="text-[9px] font-medium opacity-50">kg</span></div>
+                       </div>
+                       <div>
+                          <div className="text-[9px] text-rose-400 font-bold uppercase">Susut</div>
+                          <div className="font-black text-rose-600">{Number(log.qtyAwal) - Number(log.qtyAkhir)} <span className="text-[9px] font-medium opacity-50">kg</span></div>
+                       </div>
+                    </div>
+                 </div>
+               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <Card className="bg-slate-900 text-white border-none relative overflow-visible shadow-xl shadow-slate-900/20" padding="p-5 sm:p-6">
         <div className="absolute inset-0 overflow-hidden rounded-[1.5rem] pointer-events-none z-0">
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500 rounded-full mix-blend-screen filter blur-3xl opacity-30"></div>
@@ -1073,7 +1150,7 @@ const BulkyForm = ({ user, logs, onSave }) => {
             <h2 className="text-lg sm:text-xl font-black mb-1 flex items-center tracking-tight">
               <CalendarDays className="mr-2 text-blue-400" size={20}/> Rekap Bulky
             </h2>
-            <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Analitik Bongkaran</p>
+            <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Klik kartu untuk rincian</p>
           </div>
           <button onClick={handleShareRecap} className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black flex items-center transition-all shadow-sm active:scale-95 uppercase tracking-wider backdrop-blur-sm">
             <Share2 size={14} className="mr-1.5"/> Share
@@ -1108,7 +1185,11 @@ const BulkyForm = ({ user, logs, onSave }) => {
             </div>
           ) : (
             Object.keys(recapData).map(merk => (
-              <div key={merk} className="bg-white/10 p-3 sm:p-4 rounded-xl sm:rounded-2xl flex justify-between items-center backdrop-blur-md border border-white/5">
+              <div 
+                key={merk} 
+                onClick={() => setSelectedMerkRecap(merk)}
+                className="bg-white/10 p-3 sm:p-4 rounded-xl sm:rounded-2xl flex justify-between items-center backdrop-blur-md border border-white/5 cursor-pointer hover:bg-white/20 transition-all active:scale-95 group relative pr-8 sm:pr-10"
+              >
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="bg-white/10 w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-white border border-white/10">
                     <Truck size={20} strokeWidth={2}/>
@@ -1123,6 +1204,9 @@ const BulkyForm = ({ user, logs, onSave }) => {
                   <span className="text-[9px] sm:text-[10px] text-rose-300 font-black bg-rose-500/20 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md mt-1 sm:mt-1.5 inline-block uppercase tracking-wider">
                     Susut: {recapData[merk].totalSusut} kg
                   </span>
+                </div>
+                <div className="absolute right-3 sm:right-4 text-blue-400/50 group-hover:text-blue-300 transition-colors">
+                  <ChevronRight size={20} />
                 </div>
               </div>
             ))
@@ -1149,9 +1233,19 @@ const BulkyForm = ({ user, logs, onSave }) => {
               <ModernSelect label="Shift" value={formData.shift} onChange={(e) => setFormData({...formData, shift: e.target.value})} options={['1', '2', '3']} />
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               <FloatingInput label="No Kendaraan / No Bulky" value={formData.noBulky} onChange={(e) => setFormData({...formData, noBulky: e.target.value})} required />
               <FloatingInput label="Merk Terigu" value={formData.merk} onChange={(e) => setFormData({...formData, merk: e.target.value})} required />
+            </div>
+
+            <div className="mb-4">
+              <ModernSelect 
+                label="Tujuan Silo *" 
+                value={formData.tujuanSilo} 
+                onChange={(e) => setFormData({...formData, tujuanSilo: e.target.value})} 
+                options={['Silo 1', 'Silo 2', 'Silo 3', 'Silo 4']} 
+                required 
+              />
             </div>
             
             <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 mt-2 mb-4 sm:mb-5 shadow-inner">
@@ -1186,7 +1280,7 @@ const BulkyForm = ({ user, logs, onSave }) => {
              <Card key={log.id} padding="p-3 sm:p-4" className="flex justify-between items-center">
                 <div>
                   <span className="font-black block text-sm sm:text-base text-slate-800">{log.noBulky}</span>
-                  <span className="text-[10px] sm:text-xs font-bold text-slate-500">{log.merk} • Shift {log.shift}</span>
+                  <span className="text-[10px] sm:text-xs font-bold text-slate-500">{log.merk} • {log.tujuanSilo || 'Silo ?'} • Shift {log.shift}</span>
                 </div>
                 <div className="text-right">
                   <span className="block font-black text-blue-600 text-sm sm:text-base">{log.qtyAwal} kg</span>
@@ -1425,7 +1519,7 @@ const MaintenanceForm = ({ user, logs, onSave }) => {
   );
 };
 
-const LoginScreen = ({ onLogin, isLoading }) => {
+const LoginScreen = ({ onLogin, isLoading, error }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
@@ -1484,6 +1578,13 @@ const LoginScreen = ({ onLogin, isLoading }) => {
             >
               {isLoading ? <RefreshCw className="animate-spin mr-2" /> : 'Masuk Aplikasi'}
             </button>
+            
+            {error && (
+              <div className="mt-4 p-3 bg-rose-500/20 border border-rose-500/50 rounded-xl text-rose-200 text-xs sm:text-sm font-bold text-center flex items-center justify-center animate-fade-in">
+                <AlertCircle size={16} className="mr-2 shrink-0" /> 
+                <span className="text-left leading-tight">{error}</span>
+              </div>
+            )}
           </form>
           
           <p className="text-center text-[10px] text-blue-200/50 font-semibold mt-6 uppercase tracking-wider">
@@ -1499,6 +1600,8 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [user, setUser] = useState(null); // { username: '', role: 'operator' | 'viewer' }
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [globalMessage, setGlobalMessage] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [db, setDb] = useState({
     lastStock: null,
@@ -1553,8 +1656,9 @@ const App = () => {
   }, []);
 
   const handleLogin = async (username, password) => {
+    setLoginError('');
     if(!API_URL.includes("script.google.com")) {
-      alert("Mohon set API_URL terlebih dahulu di source code (App.jsx baris ke-16)");
+      setLoginError("Mohon set API_URL terlebih dahulu di source code.");
       return;
     }
     
@@ -1566,10 +1670,10 @@ const App = () => {
         setUser({ username: data.username, role: data.role });
         fetchData();
       } else {
-        alert("Login Gagal: Username atau Password salah.");
+        setLoginError("Login Gagal: Username atau Password salah.");
       }
     } catch (err) {
-      alert("Error koneksi ke server. Pastikan API URL benar.");
+      setLoginError("Koneksi ditolak server (CORS/Network Error). Pastikan API_URL valid & diset ke 'Anyone'.");
       console.error(err);
     }
     setIsAuthLoading(false);
@@ -1611,29 +1715,37 @@ const App = () => {
       
     } catch (err) {
       console.error("Error saving data", err);
-      alert("Gagal menyimpan data ke server.");
+      setGlobalMessage("Gagal menyimpan data ke server.");
+      setTimeout(() => setGlobalMessage(null), 3000);
     }
   };
 
   if (!user) {
-    return <LoginScreen onLogin={handleLogin} isLoading={isAuthLoading} />;
+    return <LoginScreen onLogin={handleLogin} isLoading={isAuthLoading} error={loginError} />;
   }
 
   return (
-    <Layout 
-      activeTab={activeTab} 
-      setActiveTab={setActiveTab} 
-      user={user} 
-      onLogout={() => setUser(null)}
-      isSyncing={isSyncing}
-      handleSync={fetchData}
-    >
-      {activeTab === 'dashboard' && <Dashboard db={db} />}
-      {activeTab === 'stock' && user.role === 'operator' && <StockForm db={db} onSave={handlePostData} />}
-      {activeTab === 'recap' && <OpnameRecap logs={db.opnameLogs || []} />}
-      {activeTab === 'bulky' && <BulkyForm user={user} logs={db.bulkyLogs || []} onSave={handlePostData} />}
-      {activeTab === 'maintenance' && <MaintenanceForm user={user} logs={db.maintenanceLogs || []} onSave={handlePostData} />}
-    </Layout>
+    <>
+      {globalMessage && (
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-rose-900/95 backdrop-blur-md text-white px-4 py-3 sm:px-6 sm:py-4 rounded-full shadow-2xl text-xs sm:text-sm font-bold flex items-center z-[100] border border-rose-700/50 animate-fade-in">
+          <AlertCircle size={18} className="mr-2 sm:mr-3 text-rose-400" /> {globalMessage}
+        </div>
+      )}
+      <Layout 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        user={user} 
+        onLogout={() => setUser(null)}
+        isSyncing={isSyncing}
+        handleSync={fetchData}
+      >
+        {activeTab === 'dashboard' && <Dashboard db={db} />}
+        {activeTab === 'stock' && user.role === 'operator' && <StockForm db={db} onSave={handlePostData} />}
+        {activeTab === 'recap' && <OpnameRecap logs={db.opnameLogs || []} />}
+        {activeTab === 'bulky' && <BulkyForm user={user} logs={db.bulkyLogs || []} onSave={handlePostData} />}
+        {activeTab === 'maintenance' && <MaintenanceForm user={user} logs={db.maintenanceLogs || []} onSave={handlePostData} />}
+      </Layout>
+    </>
   );
 };
 
