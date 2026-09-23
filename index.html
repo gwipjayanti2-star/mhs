@@ -1,0 +1,1640 @@
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { 
+  ClipboardList, Truck, Share2, Save, 
+  CheckCircle2, FileText, Clock, CalendarDays, 
+  TrendingUp, AlertCircle, Building2,
+  Box, BarChart3, Factory, ShieldCheck,
+  Layers, Wrench, Settings2, History, PenTool,
+  AlertTriangle, UserCircle, RefreshCw,
+  TableProperties, FileClock, Filter, KeyRound, LogOut
+} from 'lucide-react';
+
+// === GANTI URL INI DENGAN URL WEB APP GOOGLE SCRIPT ANDA ===
+const API_URL = "https://script.google.com/macros/s/AKfycbx5DlOvMjj9o3TyzEeKU9Yxvtmnx9oDuRrbAZa8kQLZGsjOo2siuKVk7qjrX9ZdZGhfeA/exec"; 
+
+const getWeekNumber = (date) => {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+};
+
+const getCurrentShiftInfo = () => {
+  const now = new Date();
+  const hours = now.getHours();
+  let shift = '1';
+  let date = new Date(now);
+
+  if (hours >= 7 && hours < 15) {
+    shift = '1';
+  } else if (hours >= 15 && hours < 23) {
+    shift = '2';
+  } else {
+    shift = '3';
+    if (hours < 7) {
+      date.setDate(date.getDate() - 1);
+    }
+  }
+  return { shift, date: date.toISOString().split('T')[0] };
+};
+
+const getDayName = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('id-ID', { weekday: 'long' });
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const DAYS_OF_WEEK = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+
+const SILO_MERK_OPTIONS = {
+  soft: ['B7', 'LM', 'MILA', 'FALCONILA', 'B7 MKL', 'LAINNYA'],
+  medium: ['W3', 'LAINNYA']
+};
+
+const Card = ({ children, className = '', padding = 'p-5' }) => {
+  const overflowClass = className.includes('overflow-') ? '' : 'overflow-hidden';
+  return (
+    <div className={`bg-white/90 backdrop-blur-sm rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] ${overflowClass} ${padding} ${className}`}>
+      {children}
+    </div>
+  );
+};
+
+const Badge = ({ children, variant = 'primary' }) => {
+  const variants = {
+    primary: 'bg-blue-50 text-blue-700 border border-blue-100',
+    success: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
+    warning: 'bg-amber-50 text-amber-700 border border-amber-100',
+    danger: 'bg-rose-50 text-rose-700 border border-rose-100',
+    slate: 'bg-slate-100 text-slate-600 border border-slate-200',
+  };
+  return (
+    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${variants[variant]}`}>
+      {children}
+    </span>
+  );
+};
+
+const FloatingInput = ({ label, type = 'text', value, onChange, placeholder, min, step, suffix, disabled, required }) => (
+  <div className="relative group w-full mb-4">
+    <input
+      type={type}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder || " "}
+      min={min}
+      step={step}
+      required={required}
+      disabled={disabled}
+      className={`block w-full px-4 pt-6 pb-2 text-base font-medium text-slate-900 bg-white border border-slate-200 rounded-2xl appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all peer shadow-sm ${disabled ? 'opacity-70 bg-slate-50 cursor-not-allowed text-slate-500 font-semibold' : ''}`}
+    />
+    <label className={`absolute text-[11px] font-bold text-slate-400 uppercase tracking-wider duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] left-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 peer-focus:text-blue-600 ${value ? 'scale-75 -translate-y-3' : ''}`}>
+      {label}
+    </label>
+    {suffix && <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+      <span className="text-slate-400 text-xs font-bold">{suffix}</span>
+    </div>}
+  </div>
+);
+
+const ModernSelect = ({ label, value, onChange, options }) => (
+  <div className="relative group w-full mb-4">
+    <select
+      value={value}
+      onChange={onChange}
+      className="block w-full px-4 pt-6 pb-2 text-base font-semibold text-slate-900 bg-white border border-slate-200 rounded-2xl appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all peer shadow-sm"
+    >
+      <option value="" disabled className="text-slate-400">Pilih...</option>
+      {options.map((opt, i) => (
+        <option key={i} value={typeof opt === 'object' ? opt.value : opt}>
+          {typeof opt === 'object' ? opt.label : opt}
+        </option>
+      ))}
+    </select>
+    <label className={`absolute text-[11px] font-bold text-slate-400 uppercase tracking-wider duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] left-4 peer-focus:text-blue-600 ${value ? 'scale-75 -translate-y-3' : ''}`}>
+      {label}
+    </label>
+    <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-400">
+      <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
+    </div>
+  </div>
+);
+
+const CustomWeekSearch = ({ value, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+
+  const weeks = useMemo(() => {
+    const arr = [{ id: 'all', label: 'Semua Minggu' }];
+    for (let i = 1; i <= 52; i++) {
+      arr.push({ id: i.toString(), label: `Minggu Ke-${i}` });
+    }
+    return arr;
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) {
+        setIsOpen(false);
+        setSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filtered = weeks.filter(w => w.label.toLowerCase().includes(search.toLowerCase()) || w.id === search);
+  const displayValue = value === 'all' ? 'Semua Minggu' : `Minggu Ke-${value}`;
+
+  return (
+    <div ref={ref} className="relative w-full flex-1 min-w-0">
+      <input
+        type="text"
+        className="w-full bg-transparent text-white text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-blue-200/50 cursor-pointer truncate"
+        placeholder="Ketik minggu (1-52)..."
+        value={isOpen ? search : displayValue}
+        onChange={(e) => {
+          setSearch(e.target.value);
+          if (!isOpen) setIsOpen(true);
+        }}
+        onFocus={() => {
+          setSearch('');
+          setIsOpen(true);
+        }}
+      />
+      {isOpen && (
+        <div className="absolute bottom-full left-0 min-w-[160px] w-full mb-2 bg-slate-800 border border-slate-700 rounded-xl shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.5)] max-h-[130px] overflow-y-auto z-[60] py-1">
+          {filtered.length > 0 ? filtered.map(w => (
+            <button
+              key={w.id}
+              type="button"
+              className="w-full text-left px-4 py-2.5 text-xs sm:text-sm text-slate-200 hover:bg-slate-700 hover:text-white font-bold transition-colors"
+              onClick={() => {
+                onChange(w.id);
+                setIsOpen(false);
+                setSearch('');
+              }}
+            >
+              {w.label}
+            </button>
+          )) : (
+            <div className="px-4 py-3 text-xs text-slate-400 font-medium">Tidak ada hasil</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const Layout = ({ children, activeTab, setActiveTab, user, onLogout, isSyncing, handleSync }) => {
+  // Viewer tidak melihat tab Stock (Opname)
+  let tabs = ['dashboard', 'stock', 'recap', 'bulky', 'maintenance'];
+  if (user?.role === 'viewer') {
+    tabs = ['dashboard', 'recap', 'bulky', 'maintenance'];
+  }
+  
+  const activeIndex = tabs.indexOf(activeTab);
+  const tabWidthPercentage = 100 / tabs.length;
+
+  return (
+    <div className="flex flex-col h-screen bg-[#F4F7F9] text-slate-800 font-sans selection:bg-blue-200">
+      <header className="bg-gradient-to-br from-[#0B1B3D] via-[#112a5f] to-[#0B1B3D] text-white pt-10 pb-8 px-6 rounded-b-[2.5rem] shadow-xl relative overflow-hidden z-20 shrink-0">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+        <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/30 rounded-full mix-blend-screen filter blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/20 to-transparent"></div>
+        
+        <div className="relative z-10 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="bg-white/10 p-3 rounded-2xl shadow-inner border border-white/20 backdrop-blur-md">
+              <Building2 size={26} className="text-white drop-shadow-md" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-black tracking-tight leading-none mb-1 text-white flex items-center">
+                MHS<span className="text-blue-400 font-bold ml-0.5">Pro</span>
+              </h1>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant={user?.role === 'operator' ? 'primary' : 'warning'}>{user?.role}</Badge>
+                <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest">{user?.username}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex flex-col items-end gap-2">
+            <button 
+              onClick={handleSync}
+              disabled={isSyncing}
+              className="group flex items-center gap-2 bg-white/10 p-2 px-3 rounded-xl backdrop-blur-md border border-white/10 shadow-lg hover:bg-white/20 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-wait"
+            >
+              <RefreshCw size={14} className={`text-blue-300 ${isSyncing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-700'}`} />
+              <span className="text-[10px] font-bold text-white tracking-widest uppercase hidden sm:inline">{isSyncing ? 'Syncing' : 'Sync'}</span>
+            </button>
+            <button 
+              onClick={onLogout}
+              className="flex items-center gap-1.5 text-[10px] font-bold text-rose-300 hover:text-rose-200 uppercase tracking-widest transition-colors"
+            >
+              <LogOut size={12} /> Keluar
+            </button>
+          </div>
+        </div>
+      </header>
+      
+      <main className="flex-1 overflow-y-auto px-4 pt-6 pb-32 relative z-10 scroll-smooth">
+        <div className="max-w-2xl mx-auto">
+          {children}
+        </div>
+      </main>
+
+      <nav className="fixed bottom-0 left-0 w-full z-30 pb-safe px-2 sm:px-4 pt-4 pointer-events-none">
+        <div className="max-w-md mx-auto pointer-events-auto">
+          <div className="bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-[2rem] shadow-[0_20px_40px_-10px_rgba(11,27,61,0.15)] p-2 mb-4 relative overflow-hidden flex">
+             <div 
+               className="absolute h-[calc(100%-16px)] bg-blue-50 rounded-[1.5rem] transition-all duration-500 ease-spring z-0"
+               style={{
+                 left: `calc(${activeIndex * tabWidthPercentage}% + 8px)`,
+                 width: `calc(${tabWidthPercentage}% - 16px)`,
+                 top: '8px'
+               }}
+             />
+             <NavItem id="dashboard" icon={<BarChart3 size={22} />} label="Dasbor" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+             {user?.role === 'operator' && (
+               <NavItem id="stock" icon={<ClipboardList size={22} />} label="Opname" active={activeTab === 'stock'} onClick={() => setActiveTab('stock')} />
+             )}
+             <NavItem id="recap" icon={<FileClock size={22} />} label="Rekap" active={activeTab === 'recap'} onClick={() => setActiveTab('recap')} />
+             <NavItem id="bulky" icon={<Truck size={22} />} label="Bulky" active={activeTab === 'bulky'} onClick={() => setActiveTab('bulky')} />
+             <NavItem id="maintenance" icon={<Settings2 size={22} />} label="Kendala" active={activeTab === 'maintenance'} onClick={() => setActiveTab('maintenance')} />
+          </div>
+        </div>
+      </nav>
+    </div>
+  );
+};
+
+const NavItem = ({ icon, label, active, onClick }) => (
+  <button 
+    onClick={onClick}
+    className="flex-1 flex flex-col items-center justify-center py-2 relative z-10 group outline-none"
+  >
+    <div className={`transition-all duration-300 ${active ? 'text-blue-600 transform -translate-y-1 drop-shadow-sm' : 'text-slate-400 group-hover:text-slate-600 group-hover:-translate-y-0.5'}`}>
+      {React.cloneElement(icon, { size: active ? 24 : 22 })}
+    </div>
+    <span className={`text-[9px] sm:text-[10px] mt-1 transition-all duration-300 ${active ? 'font-black text-blue-700' : 'font-bold text-slate-400'}`}>{label}</span>
+  </button>
+);
+
+const StockCard = ({ title, type, data, color }) => {
+  const currentBatch = data?.batches?.[0] || { qty: data?.akhir || 0, gluten: '-' };
+  const nextBatch = data?.batches?.[1];
+  
+  const maxCapacity = 85000;
+  const akhirVal = data?.akhir || 0;
+  const fillPercentage = (akhirVal / maxCapacity) * 100;
+  const fillClass = color === 'blue' ? 'bg-gradient-to-t from-blue-500 to-blue-300' : 'bg-gradient-to-t from-emerald-500 to-emerald-300';
+  const borderColor = color === 'blue' ? 'border-t-blue-500' : 'border-t-emerald-500';
+
+  return (
+    <Card padding="p-0" className={`border-t-[4px] ${borderColor} flex flex-col h-full overflow-hidden shadow-sm`}>
+      <div className="p-3 sm:p-4 flex-1 flex flex-col">
+        <div className="flex justify-between items-start mb-2 sm:mb-3">
+          <div className="min-w-0 pr-1">
+            <span className="font-black text-sm sm:text-base text-slate-800 block leading-none mb-1 truncate">{title}</span>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block truncate">{type}</span>
+          </div>
+          <Badge variant={color === 'blue' ? 'primary' : 'success'}>
+            <span className="truncate max-w-[50px] inline-block align-bottom">{data?.merk || '-'}</span>
+          </Badge>
+        </div>
+
+        <div className="flex justify-between items-end mb-3 flex-1 gap-2">
+          <div className="flex-1 min-w-0 pb-1">
+             <span className="text-lg sm:text-xl font-black text-slate-800 tracking-tighter block truncate leading-none">{akhirVal}</span>
+             <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 mt-0.5 block">kg</span>
+          </div>
+          <div className="shrink-0 flex flex-col items-center">
+            <div className="relative w-9 sm:w-11 h-20 sm:h-24 bg-slate-200 rounded-t-xl rounded-b-md border-[2px] border-slate-300 overflow-hidden shadow-[inset_0_2px_10px_rgba(0,0,0,0.1)] flex items-end">
+              <div 
+                className={`absolute bottom-0 left-0 right-0 ${fillClass} transition-all duration-1000 ease-in-out`}
+                style={{ height: `${Math.min(100, Math.max(0, fillPercentage))}%` }}
+              ></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-white/50 to-black/20 pointer-events-none mix-blend-overlay"></div>
+              <div className="absolute inset-0 flex flex-col justify-between py-2 opacity-20 pointer-events-none">
+                <div className="w-full h-[1px] bg-black/50"></div>
+                <div className="w-full h-[1px] bg-black/50"></div>
+                <div className="w-full h-[1px] bg-black/50"></div>
+              </div>
+            </div>
+            <div className="mt-1.5 bg-white px-1.5 py-0.5 rounded shadow-sm border border-slate-100">
+               <span className="text-[8px] font-black text-slate-600">
+                 {fillPercentage > 0 && fillPercentage < 1 ? fillPercentage.toFixed(1) : Math.round(fillPercentage)}%
+               </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/60 shadow-inner mt-auto space-y-1">
+           <div className="flex justify-between items-center gap-1">
+             <span className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase">Gluten</span>
+             <span className="text-[9px] sm:text-[10px] font-black text-slate-800 truncate">{currentBatch.gluten !== '-' ? `${currentBatch.gluten}%` : '-'}</span>
+           </div>
+           <div className="flex justify-between items-center gap-1">
+             <span className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase">Sisa</span>
+             <span className="text-[9px] sm:text-[10px] font-black text-slate-600 truncate">{currentBatch.qty} kg</span>
+           </div>
+           <div className="h-[1px] bg-slate-200 w-full my-0.5"></div>
+           <div className="flex justify-between items-center gap-1">
+             <span className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase">Next</span>
+             <span className="text-[8px] sm:text-[9px] font-black text-slate-600 bg-slate-200/50 px-1 rounded truncate">{nextBatch ? `${nextBatch.gluten}%` : '-'}</span>
+           </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+const Dashboard = ({ db }) => {
+  if (!db.lastStock) return <div className="text-center py-10">Memuat data...</div>;
+
+  const handleShareAwal = () => {
+    const { shift, date } = getCurrentShiftInfo();
+    const hari = getDayName(date);
+    const tgl = formatDate(date);
+    const s = db.lastStock;
+
+    let msg = `*INFO STOK AWAL SHIFT*\n`;
+    msg += `Hari/Tanggal : ${hari}, ${tgl}\n`;
+    msg += `Shift berjalan : ${shift}\n\n`;
+
+    const formatSiloMsg = (name, type, data) => {
+      const currentBatch = data?.batches?.[0];
+      const nextBatch = data?.batches?.[1];
+      let str = `*${name} (${type} - ${data?.merk || '-'})*\nStok Total: ${data?.akhir || 0} kg\n`;
+      if(currentBatch) {
+        str += `Gluten Dipakai: ${currentBatch.gluten}% (Sisa: ${currentBatch.qty} kg)\n`;
+      }
+      if(nextBatch) {
+        str += `Next FIFO: ${nextBatch.gluten}%\n`;
+      }
+      return str + `\n`;
+    };
+
+    msg += formatSiloMsg('SILO 1', 'Medium', s.silo1);
+    msg += formatSiloMsg('SILO 2', 'Soft', s.silo2);
+    msg += formatSiloMsg('SILO 3', 'Soft', s.silo3);
+    msg += formatSiloMsg('SILO 4', 'Medium', s.silo4);
+    
+    msg += `*Mini Silo Tapioka (${s.tapioka?.merk || '-'})*: ${s.tapioka?.akhir || 0} kg\n`;
+    msg += `*Gula Mesh 30 (${s.gula?.merk || '-'})*: ${s.gula?.akhir || 0} kg\n`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  return (
+    <div className="space-y-5 animate-fade-in">
+      <div className="flex justify-between items-end mb-2 px-1">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">Status Stok</h2>
+          <p className="text-xs sm:text-sm font-semibold text-slate-500">Real-time inventory & FIFO</p>
+        </div>
+        <button onClick={handleShareAwal} className="bg-white text-blue-700 border border-blue-100 hover:bg-blue-50 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-black flex items-center transition-all shadow-sm active:scale-95">
+          <Share2 size={16} className="mr-1.5 sm:mr-2"/> <span className="hidden sm:inline">Bagikan</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <StockCard title="Silo 1" type="Medium" data={db.lastStock.silo1} color="blue" />
+        <StockCard title="Silo 2" type="Soft" data={db.lastStock.silo2} color="emerald" />
+        <StockCard title="Silo 3" type="Soft" data={db.lastStock.silo3} color="emerald" />
+        <StockCard title="Silo 4" type="Medium" data={db.lastStock.silo4} color="blue" />
+      </div>
+      
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-2">
+        <Card className="flex flex-col items-center justify-center text-center relative overflow-hidden group border-amber-200/60 shadow-amber-900/5 py-4 sm:py-6">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-transparent opacity-80 z-0"></div>
+          <div className="relative z-10 w-full flex flex-col items-center">
+            <div className="bg-white shadow-sm border border-amber-100 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mx-auto mb-2 text-amber-600 group-hover:scale-110 transition-transform">
+              <Box size={18} strokeWidth={2.5} />
+            </div>
+            <span className="text-amber-700/70 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest block mb-1">Tapioka</span>
+            <Badge variant="warning">{db.lastStock.tapioka?.merk || '-'}</Badge>
+            <span className="text-xl sm:text-2xl font-black text-slate-800 mt-2">{db.lastStock.tapioka?.akhir || 0} <span className="text-[10px] sm:text-xs text-slate-400 font-bold">kg</span></span>
+          </div>
+        </Card>
+        
+        <Card className="flex flex-col items-center justify-center text-center relative overflow-hidden group border-indigo-200/60 shadow-indigo-900/5 py-4 sm:py-6">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-transparent opacity-80 z-0"></div>
+          <div className="relative z-10 w-full flex flex-col items-center">
+            <div className="bg-white shadow-sm border border-indigo-100 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mx-auto mb-2 text-indigo-600 group-hover:scale-110 transition-transform">
+              <Box size={18} strokeWidth={2.5} />
+            </div>
+            <span className="text-indigo-700/70 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest block mb-1">Gula Mesh 30</span>
+            <Badge variant="slate">{db.lastStock.gula?.merk || '-'}</Badge>
+            <span className="text-xl sm:text-2xl font-black text-slate-800 mt-2">{db.lastStock.gula?.akhir || 0} <span className="text-[10px] sm:text-xs text-slate-400 font-bold">kg</span></span>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+const StockForm = ({ db, onSave }) => {
+  const [toast, setToast] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const { shift: autoShift, date: autoDate } = useMemo(() => getCurrentShiftInfo(), []);
+
+  const [formData, setFormData] = useState({
+    tanggal: autoDate,
+    shift: autoShift,
+    silo1: { merk: db.lastStock?.silo1?.merk || '', customMerk: '', awal: db.lastStock?.silo1?.akhir || 0, masuk: '', akhir: '', jenisMasuk: 'zak', gluten: '' },
+    silo2: { merk: db.lastStock?.silo2?.merk || '', awal: db.lastStock?.silo2?.akhir || 0, masuk: '', akhir: '', jenisMasuk: 'zak', gluten: '' },
+    silo3: { merk: db.lastStock?.silo3?.merk || '', awal: db.lastStock?.silo3?.akhir || 0, masuk: '', akhir: '', jenisMasuk: 'zak', gluten: '' },
+    silo4: { merk: db.lastStock?.silo4?.merk || '', customMerk: '', awal: db.lastStock?.silo4?.akhir || 0, masuk: '', akhir: '', jenisMasuk: 'zak', gluten: '' },
+    tapioka: { merk: db.lastStock?.tapioka?.merk || '', awal: db.lastStock?.tapioka?.akhir || 0, masuk: '', akhir: '' },
+    gula: { merk: db.lastStock?.gula?.merk || '', akhir: db.lastStock?.gula?.akhir || 0 },
+    catatanOpname: '',
+    aktualPemakaian: {
+      stage1: { l1: '', l2: '', l3: '', l4: '', l5: '' },
+      stage2: { l1: '', l2: '', l3: '', l4: '', l5: '' }
+    },
+    serahTerima: ['', '', '', '', '']
+  });
+
+  const calcPakai = (awal, masuk, akhir) => {
+    if (akhir === '' || akhir === null) return 0;
+    const p = (Number(awal) || 0) + (Number(masuk) || 0) - (Number(akhir) || 0);
+    return p > 0 ? p : 0;
+  };
+
+  const handleSiloChange = (siloKey, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [siloKey]: { ...prev[siloKey], [field]: value }
+    }));
+  };
+
+  const generateWhatsAppMessage = () => {
+    const d = formData;
+    const hari = getDayName(d.tanggal);
+    const tgl = formatDate(d.tanggal);
+    
+    const getMerkStr = (silo) => silo.merk === 'LAINNYA' ? (silo.customMerk || 'Lainnya') : silo.merk;
+    const getSiloStr = (name, type, data) => {
+      const pakai = calcPakai(data.awal, data.masuk, data.akhir);
+      let str = `*${name}* : *Terigu ${type} ${getMerkStr(data)}*\n`;
+      str += `Stock awal : ${data.awal} kg\n`;
+      
+      let pemasukanStr = data.masuk ? `${data.masuk} kg` : '-';
+      if (data.masuk && data.gluten) {
+        pemasukanStr += ` (Gluten: ${data.gluten}%)`;
+      }
+      str += `Pemasukan : ${pemasukanStr}\n`;
+      str += `Pemakaian : ${pakai} kg\n`;
+      str += `Stock Akhir : ${data.akhir || data.awal} kg\n`;
+      return str;
+    };
+
+    const nextShift = d.shift === '3' ? '1' : String(Number(d.shift) + 1);
+
+    let msg = `*LAPORAN OPNAME & SERAH TERIMA*\n`;
+    msg += `Hari : ${hari}, ${tgl}\nShift : ${d.shift}\n\n`;
+    msg += getSiloStr('Silo 1', 'medium', d.silo1) + '\n';
+    msg += getSiloStr('Silo 2', 'soft', d.silo2) + '\n';
+    msg += getSiloStr('Silo 3', 'soft', d.silo3) + '\n';
+    msg += getSiloStr('Silo 4', 'medium', d.silo4) + '\n';
+    
+    const tapiokaPakai = calcPakai(d.tapioka.awal, d.tapioka.masuk, d.tapioka.akhir);
+    msg += `*Mini Silo Tapioka (${d.tapioka.merk})*\n`;
+    msg += `Awal : ${d.tapioka.awal} kg | Masuk : ${d.tapioka.masuk || '-'} kg\n`;
+    msg += `Pakai: ${tapiokaPakai} kg | Akhir : ${d.tapioka.akhir || d.tapioka.awal} kg\n\n`;
+
+    msg += `*GULA MESH 30 (${d.gula.merk}) : ${d.gula.akhir || '-'} kg*\n\n`;
+
+    if (d.catatanOpname.trim() !== '') {
+      msg += `*Catatan Opname:*\n${d.catatanOpname}\n\n`;
+    }
+
+    msg += `*Catatan Handover ke Shift ${nextShift}:*\n`;
+    const notes = d.serahTerima.filter(n => n.trim() !== '');
+    if(notes.length > 0) {
+        notes.forEach((catatan, i) => msg += `${i + 1}. ${catatan}\n`);
+    } else {
+        msg += `- Aman / Tidak ada catatan khusus\n`;
+    }
+
+    return encodeURIComponent(msg);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    const calculateNewBatches = (siloKey) => {
+      const formInput = formData[siloKey];
+      const prevSilo = db.lastStock[siloKey] || { batches: [] };
+      
+      const awal = Number(formInput.awal) || 0;
+      const masuk = Number(formInput.masuk) || 0;
+      const akhir = Number(formInput.akhir) || awal;
+      const pemakaian = Math.max(0, (awal + masuk) - akhir);
+
+      let currentBatches = [...(prevSilo.batches || [{ qty: awal, gluten: '-' }])];
+      let remainingUsage = pemakaian;
+
+      while (remainingUsage > 0 && currentBatches.length > 0) {
+        if (currentBatches[0].qty <= remainingUsage) {
+          remainingUsage -= currentBatches[0].qty;
+          currentBatches.shift(); 
+        } else {
+          currentBatches[0].qty -= remainingUsage;
+          remainingUsage = 0;
+        }
+      }
+
+      if (masuk > 0) {
+        currentBatches.push({ 
+          qty: masuk, 
+          gluten: formInput.gluten || (currentBatches.length > 0 ? currentBatches[currentBatches.length-1].gluten : '-') 
+        });
+      }
+
+      if (currentBatches.length === 0 && akhir > 0) {
+        currentBatches.push({ qty: akhir, gluten: prevSilo.batches?.[0]?.gluten || '-' });
+      }
+
+      return currentBatches;
+    };
+
+    const newStockData = {
+      silo1: { 
+        akhir: formData.silo1.akhir || formData.silo1.awal, 
+        merk: formData.silo1.merk === 'LAINNYA' ? formData.silo1.customMerk : formData.silo1.merk, 
+        batches: calculateNewBatches('silo1')
+      },
+      silo2: { 
+        akhir: formData.silo2.akhir || formData.silo2.awal, 
+        merk: formData.silo2.merk, 
+        batches: calculateNewBatches('silo2')
+      },
+      silo3: { 
+        akhir: formData.silo3.akhir || formData.silo3.awal, 
+        merk: formData.silo3.merk, 
+        batches: calculateNewBatches('silo3')
+      },
+      silo4: { 
+        akhir: formData.silo4.akhir || formData.silo4.awal, 
+        merk: formData.silo4.merk === 'LAINNYA' ? formData.silo4.customMerk : formData.silo4.merk, 
+        batches: calculateNewBatches('silo4')
+      },
+      tapioka: { akhir: formData.tapioka.akhir || formData.tapioka.awal, merk: formData.tapioka.merk },
+      gula: { akhir: formData.gula.akhir, merk: formData.gula.merk }
+    };
+    
+    const newLogEntry = {
+      ...formData,
+      id: Date.now(),
+      timestamp: new Date().toISOString()
+    };
+
+    await onSave({ action: 'saveOpname', payload: { stock: newStockData, log: newLogEntry } });
+    
+    setIsSaving(false);
+    setToast('Opname berhasil disimpan ke server');
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const SiloSection = ({ title, type, siloKey, options }) => {
+    const data = formData[siloKey];
+    const pemakaian = calcPakai(data.awal, data.masuk, data.akhir);
+    
+    return (
+      <Card className="mb-6 border-t-[6px] border-t-slate-800">
+        <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3">
+             <div className="p-2 sm:p-2.5 rounded-xl bg-slate-100 text-slate-800">
+               <Factory size={20} strokeWidth={2.5} className="sm:w-[22px] sm:h-[22px]" />
+             </div>
+             <h3 className="font-black text-slate-800 text-lg sm:text-xl">{title}</h3>
+          </div>
+          <Badge variant="slate">{type}</Badge>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <ModernSelect label="Merk Terigu" value={data.merk} onChange={(e) => handleSiloChange(siloKey, 'merk', e.target.value)} options={options} />
+          {data.merk === 'LAINNYA' ? (
+             <FloatingInput label="Ketik Merk" value={data.customMerk} onChange={(e) => handleSiloChange(siloKey, 'customMerk', e.target.value)} />
+          ) : <div className="hidden sm:block"></div>}
+        </div>
+
+        <div className="bg-slate-50/80 p-3 sm:p-4 rounded-2xl border border-slate-200/60 mb-5 shadow-inner">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Sumber Pemasukan:</label>
+            <div className="flex bg-white rounded-lg p-1 border border-slate-200 shadow-sm self-start sm:self-auto">
+              <button 
+                type="button"
+                className={`px-4 py-1.5 text-xs font-black rounded-md transition-all ${data.jenisMasuk === 'zak' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                onClick={() => handleSiloChange(siloKey, 'jenisMasuk', 'zak')}
+              >Zak</button>
+              <button 
+                type="button"
+                className={`px-4 py-1.5 text-xs font-black rounded-md transition-all ${data.jenisMasuk === 'bulky' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                onClick={() => handleSiloChange(siloKey, 'jenisMasuk', 'bulky')}
+              >Bulky</button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <FloatingInput label="Jml Masuk" type="number" suffix="kg" value={data.masuk} onChange={(e) => handleSiloChange(siloKey, 'masuk', e.target.value)} />
+            <FloatingInput 
+              label="Gluten %" 
+              type="number" step="0.1" suffix="%" value={data.gluten} 
+              onChange={(e) => handleSiloChange(siloKey, 'gluten', e.target.value)} 
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 items-start mb-5">
+          <FloatingInput label="Stock Awal" type="number" suffix="kg" value={data.awal} disabled />
+          <FloatingInput label="Stock Akhir *" type="number" suffix="kg" value={data.akhir} onChange={(e) => handleSiloChange(siloKey, 'akhir', e.target.value)} required />
+        </div>
+
+        <div className="flex justify-between items-center bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-lg relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+          <span className="text-[10px] sm:text-xs font-bold text-slate-300 uppercase tracking-widest relative z-10">Pemakaian:</span>
+          <span className="font-black text-2xl sm:text-3xl text-blue-400 tracking-tight relative z-10">{pemakaian} <span className="text-xs sm:text-sm font-semibold opacity-60">kg</span></span>
+        </div>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="space-y-6 pb-8 animate-fade-in">
+      <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-md text-white px-4 py-3 sm:px-6 sm:py-4 rounded-full shadow-2xl text-xs sm:text-sm font-bold flex items-center z-50 transition-all duration-300 border border-slate-700/50 ${toast ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-10 scale-95 pointer-events-none'}`}>
+        <CheckCircle2 size={18} className="mr-2 sm:mr-3 text-emerald-400" /> {toast}
+      </div>
+
+      <Card className="bg-gradient-to-br from-blue-600 to-[#0B1B3D] text-white border-none relative overflow-hidden shadow-xl shadow-blue-900/20" padding="p-5 sm:p-6">
+        <div className="absolute top-0 right-0 w-40 h-40 sm:w-48 sm:h-48 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+         <div className="relative z-10">
+           <div className="flex justify-between items-center mb-5 sm:mb-6">
+             <div>
+               <h2 className="text-xl sm:text-2xl font-black mb-1 tracking-tight">Opname Harian</h2>
+               <p className="text-[10px] sm:text-xs text-blue-200 font-bold uppercase tracking-widest flex items-center"><Clock size={12} className="mr-1.5"/> Data Shift Berjalan</p>
+             </div>
+           </div>
+           
+           <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-5">
+             <div className="bg-black/20 p-3 rounded-xl sm:rounded-2xl backdrop-blur-sm border border-white/10">
+                <label className="block text-[9px] sm:text-[10px] font-black text-blue-200 mb-1 sm:mb-1.5 uppercase tracking-widest">Tanggal</label>
+                <input type="date" value={formData.tanggal} onChange={(e) => setFormData({...formData, tanggal: e.target.value})} className="w-full bg-transparent text-white text-sm sm:text-base font-bold outline-none custom-date-input" />
+             </div>
+             <div className="bg-black/20 p-3 rounded-xl sm:rounded-2xl backdrop-blur-sm border border-white/10">
+                <label className="block text-[9px] sm:text-[10px] font-black text-blue-200 mb-1 sm:mb-1.5 uppercase tracking-widest">Shift</label>
+                <select value={formData.shift} onChange={(e) => setFormData({...formData, shift: e.target.value})} className="w-full bg-transparent text-white text-sm sm:text-base font-bold outline-none appearance-none">
+                  <option value="1" className="text-slate-800">Shift 1 (07:00-15:00)</option>
+                  <option value="2" className="text-slate-800">Shift 2 (15:00-23:00)</option>
+                  <option value="3" className="text-slate-800">Shift 3 (23:00-07:00)</option>
+                </select>
+             </div>
+           </div>
+
+           <div className="flex bg-white/10 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/10 items-start backdrop-blur-sm">
+              <AlertCircle size={16} className="text-blue-300 mr-2 sm:mr-3 mt-0.5 flex-shrink-0" />
+              <p className="text-[11px] sm:text-xs font-medium text-blue-50 leading-relaxed">
+                Input <strong className="text-white font-black">Stock Akhir</strong> hasil fisik. Kalkulasi pemakaian dihitung otomatis.
+              </p>
+           </div>
+         </div>
+      </Card>
+
+      <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+        <SiloSection title="Silo 1" type="Medium" siloKey="silo1" options={SILO_MERK_OPTIONS.medium} />
+        <SiloSection title="Silo 2" type="Soft" siloKey="silo2" options={SILO_MERK_OPTIONS.soft} />
+        <SiloSection title="Silo 3" type="Soft" siloKey="silo3" options={SILO_MERK_OPTIONS.soft} />
+        <SiloSection title="Silo 4" type="Medium" siloKey="silo4" options={SILO_MERK_OPTIONS.medium} />
+
+        <Card className="mb-6">
+          <h3 className="font-black text-slate-800 text-lg sm:text-lg mb-4 sm:mb-5 flex items-center border-b border-slate-100 pb-3 sm:pb-4">
+            <div className="p-2 sm:p-2.5 bg-amber-100 text-amber-700 rounded-xl mr-3"><Box size={18} strokeWidth={2.5}/></div>
+            Mini Silo Tapioka
+          </h3>
+          <div className="grid grid-cols-1 gap-3 mb-4 sm:mb-5">
+             <FloatingInput label="Merk Tapioka" value={formData.tapioka.merk} onChange={(e) => setFormData({...formData, tapioka: {...formData.tapioka, merk: e.target.value}})} required/>
+             <FloatingInput label="Stock Awal" type="number" suffix="kg" value={formData.tapioka.awal} disabled />
+             <div className="grid grid-cols-2 gap-3">
+               <FloatingInput label="Pemasukan" type="number" suffix="kg" value={formData.tapioka.masuk} onChange={(e) => setFormData({...formData, tapioka: {...formData.tapioka, masuk: e.target.value}})} />
+               <FloatingInput label="Stock Akhir *" type="number" suffix="kg" value={formData.tapioka.akhir} onChange={(e) => setFormData({...formData, tapioka: {...formData.tapioka, akhir: e.target.value}})} required/>
+             </div>
+          </div>
+          <div className="flex justify-between items-center bg-slate-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-inner">
+            <span className="font-black text-slate-500 uppercase text-[10px] sm:text-[11px] tracking-widest">Pemakaian Kalkulasi:</span> 
+            <span className="font-black text-xl sm:text-2xl text-slate-800">{calcPakai(formData.tapioka.awal, formData.tapioka.masuk, formData.tapioka.akhir)} <span className="text-xs sm:text-sm font-semibold opacity-60">kg</span></span>
+          </div>
+        </Card>
+
+        <Card className="mb-6">
+          <h3 className="font-black text-slate-800 text-lg mb-4 flex items-center border-b border-slate-100 pb-3">
+            <div className="p-2 bg-indigo-100 text-indigo-700 rounded-xl mr-3"><Box size={18} strokeWidth={2.5}/></div>
+            Gula Mesh 30
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+             <FloatingInput label="Merk Gula" value={formData.gula.merk} onChange={(e) => setFormData({...formData, gula: {...formData.gula, merk: e.target.value}})} required/>
+             <FloatingInput label="Total Opname" type="number" suffix="kg" value={formData.gula.akhir} onChange={(e) => setFormData({...formData, gula: {...formData.gula, akhir: e.target.value}})} required/>
+          </div>
+        </Card>
+
+        <Card className="mb-6 border-l-[4px] border-l-blue-400">
+          <h3 className="font-black text-slate-800 text-md sm:text-lg mb-3 flex items-center">
+            <div className="p-1.5 sm:p-2 bg-blue-50 text-blue-600 rounded-lg mr-2"><PenTool size={16} strokeWidth={2.5}/></div>
+            Catatan Opname
+          </h3>
+          <p className="text-[10px] sm:text-xs text-slate-500 mb-3 font-medium">Tambahkan info operasional terkait opname saat ini (Opsional).</p>
+          <div className="flex items-start bg-slate-50 p-1 rounded-2xl border border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all shadow-inner">
+              <textarea 
+                rows="3"
+                value={formData.catatanOpname} 
+                onChange={(e) => setFormData({...formData, catatanOpname: e.target.value})}
+                placeholder="Misal: Ngisi zak manual 500kg, sisa bulky dibagi ke silo 2 dan 3..." 
+                className="w-full bg-transparent p-3 text-sm font-medium text-slate-800 outline-none resize-none placeholder-slate-400"
+              />
+          </div>
+        </Card>
+
+        <Card className="mb-6">
+          <h3 className="font-black text-slate-800 text-lg mb-4 flex items-center border-b border-slate-100 pb-3">
+            <div className="p-2 bg-purple-100 text-purple-700 rounded-xl mr-3"><FileText size={18} strokeWidth={2.5}/></div>
+            Catatan Handover
+          </h3>
+          <div className="space-y-2.5">
+          {[0,1,2,3].map(i => (
+            <div key={i} className="flex items-start bg-white p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all shadow-sm">
+              <span className="text-slate-400 text-[10px] sm:text-xs font-black w-8 text-center pt-2 sm:pt-2.5">{i+1}.</span>
+              <textarea 
+                rows="1"
+                value={formData.serahTerima[i]} 
+                onChange={(e) => {
+                  const newNotes = [...formData.serahTerima];
+                  newNotes[i] = e.target.value;
+                  setFormData({...formData, serahTerima: newNotes});
+                }} 
+                placeholder="Catatan operasional..." 
+                className="flex-1 bg-transparent p-1.5 sm:p-2 text-xs sm:text-sm font-medium text-slate-800 outline-none resize-none overflow-hidden"
+                onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = (e.target.scrollHeight) + 'px'; }}
+              />
+            </div>
+          ))}
+          </div>
+        </Card>
+
+        <div className="mt-8 w-full pb-8">
+          <div className="flex gap-2 sm:gap-3 flex-col sm:flex-row">
+            <button type="submit" disabled={isSaving} className="w-full sm:flex-[2] bg-slate-900 hover:bg-black text-white py-3.5 sm:py-4 rounded-xl sm:rounded-2xl flex items-center justify-center font-black transition-all shadow-lg active:scale-95 text-sm disabled:opacity-70 disabled:cursor-wait">
+              {isSaving ? <RefreshCw className="animate-spin mr-2" size={18}/> : <Save size={18} className="mr-2" />} 
+              {isSaving ? 'Menyimpan...' : 'Simpan Opname'}
+            </button>
+            <button type="button" onClick={() => window.open(`https://wa.me/?text=${generateWhatsAppMessage()}`, '_blank')} className="w-full sm:flex-[1] bg-white text-blue-700 border border-slate-200 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl flex items-center justify-center font-black transition-all shadow-lg active:scale-95 text-sm mt-3 sm:mt-0">
+              <Share2 size={18} className="mr-2" /> Bagikan WA
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+const OpnameRecap = ({ logs }) => {
+  const [selectedWeek, setSelectedWeek] = useState('all');
+  const [selectedDay, setSelectedDay] = useState('all');
+
+  const calcPakai = (awal, masuk, akhir) => {
+    const p = (Number(awal) || 0) + (Number(masuk) || 0) - (Number(akhir) || 0);
+    return p > 0 ? p : 0;
+  };
+
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => {
+      const logDate = new Date(log.timestamp);
+      const logWeek = getWeekNumber(logDate).toString();
+      const logDayName = getDayName(log.tanggal).toLowerCase();
+
+      const weekMatches = selectedWeek === 'all' || logWeek === selectedWeek.toString();
+      const dayMatches = selectedDay === 'all' || logDayName === selectedDay.toLowerCase();
+
+      return weekMatches && dayMatches;
+    }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }, [logs, selectedWeek, selectedDay]);
+
+  return (
+    <div className="space-y-4 animate-fade-in pb-8">
+       <Card className="bg-slate-900 text-white border-none relative overflow-visible shadow-xl shadow-slate-900/20" padding="p-5 sm:p-6">
+        <div className="absolute inset-0 overflow-hidden rounded-[1.5rem] pointer-events-none z-0">
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500 rounded-full mix-blend-screen filter blur-3xl opacity-30"></div>
+        </div>
+        <div className="flex justify-between items-center relative z-10 mb-4 border-b border-white/10 pb-4">
+          <div>
+            <h2 className="text-xl font-black mb-1 flex items-center tracking-tight">
+              <FileClock className="mr-2 text-blue-400" size={22}/> Riwayat Opname
+            </h2>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tabel rekapitulasi per shift</p>
+          </div>
+        </div>
+        
+        <div className="relative z-10 grid grid-cols-2 gap-3">
+           <div className="bg-white/10 rounded-xl p-1 border border-white/10 flex items-center">
+             <Filter size={14} className="text-blue-300 ml-2 mr-1 shrink-0" />
+             <CustomWeekSearch value={selectedWeek} onChange={setSelectedWeek} />
+           </div>
+           
+           <div className="bg-white/10 rounded-xl p-1 border border-white/10 flex items-center">
+             <CalendarDays size={14} className="text-blue-300 ml-2 mr-1 shrink-0" />
+             <select 
+                value={selectedDay} 
+                onChange={(e) => setSelectedDay(e.target.value)}
+                className="w-full bg-transparent text-white text-xs sm:text-sm font-bold p-2 outline-none appearance-none"
+             >
+                <option value="all" className="text-slate-800">Semua Hari</option>
+                {DAYS_OF_WEEK.map(day => (
+                  <option key={day} value={day} className="text-slate-800">{day}</option>
+                ))}
+             </select>
+           </div>
+        </div>
+      </Card>
+
+      {filteredLogs.length === 0 ? (
+        <div className="text-center p-8 bg-slate-50 rounded-3xl border border-slate-200 border-dashed mt-4">
+          <ClipboardList size={32} className="mx-auto text-slate-300 mb-3" />
+          <p className="text-sm font-semibold text-slate-500">Tidak ada riwayat untuk filter yang dipilih.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">
+            Menampilkan {filteredLogs.length} Data
+          </div>
+          {filteredLogs.map(log => {
+             const tglStr = formatDate(log.tanggal);
+             const hariStr = getDayName(log.tanggal);
+             
+             return (
+               <Card key={log.id} padding="p-0" className="overflow-hidden border border-slate-200/80 shadow-sm">
+                 <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+                    <div>
+                       <div className="font-black text-slate-800 text-sm">{hariStr}, {tglStr}</div>
+                       <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Disimpan: {new Date(log.timestamp).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})}</div>
+                    </div>
+                    <Badge variant="warning">Shift {log.shift}</Badge>
+                 </div>
+                 
+                 <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs sm:text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100/50 text-slate-500 uppercase tracking-wider text-[9px] sm:text-[10px]">
+                          <th className="p-3 sm:px-4 sm:py-3 font-black w-[35%]">Item / Silo</th>
+                          <th className="p-3 sm:px-4 sm:py-3 font-black text-right">Awal</th>
+                          <th className="p-3 sm:px-4 sm:py-3 font-black text-right">Masuk</th>
+                          <th className="p-3 sm:px-4 sm:py-3 font-black text-right text-blue-600">Pakai</th>
+                          <th className="p-3 sm:px-4 sm:py-3 font-black text-right">Akhir</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        <tr className="hover:bg-slate-50/50 transition-colors">
+                          <td className="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">
+                             Silo 1 <span className="block text-[9px] text-slate-400 font-semibold">{log.silo1?.merk}</span>
+                          </td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">{log.silo1?.awal || 0}</td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">
+                            {log.silo1?.masuk || '-'}
+                            {log.silo1?.jenisMasuk === 'bulky' && <span className="block text-[8px] text-blue-500">Bulky</span>}
+                          </td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">{calcPakai(log.silo1?.awal, log.silo1?.masuk, log.silo1?.akhir)}</td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">{log.silo1?.akhir || 0}</td>
+                        </tr>
+                        <tr className="hover:bg-slate-50/50 transition-colors">
+                          <td className="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">
+                             Silo 2 <span className="block text-[9px] text-slate-400 font-semibold">{log.silo2?.merk}</span>
+                          </td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">{log.silo2?.awal || 0}</td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">
+                            {log.silo2?.masuk || '-'}
+                            {log.silo2?.jenisMasuk === 'bulky' && <span className="block text-[8px] text-blue-500">Bulky</span>}
+                          </td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">{calcPakai(log.silo2?.awal, log.silo2?.masuk, log.silo2?.akhir)}</td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">{log.silo2?.akhir || 0}</td>
+                        </tr>
+                        <tr className="hover:bg-slate-50/50 transition-colors">
+                          <td className="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">
+                             Silo 3 <span className="block text-[9px] text-slate-400 font-semibold">{log.silo3?.merk}</span>
+                          </td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">{log.silo3?.awal || 0}</td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">
+                            {log.silo3?.masuk || '-'}
+                            {log.silo3?.jenisMasuk === 'bulky' && <span className="block text-[8px] text-blue-500">Bulky</span>}
+                          </td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">{calcPakai(log.silo3?.awal, log.silo3?.masuk, log.silo3?.akhir)}</td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">{log.silo3?.akhir || 0}</td>
+                        </tr>
+                         <tr className="hover:bg-slate-50/50 transition-colors">
+                          <td className="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">
+                             Silo 4 <span className="block text-[9px] text-slate-400 font-semibold">{log.silo4?.merk}</span>
+                          </td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">{log.silo4?.awal || 0}</td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">
+                            {log.silo4?.masuk || '-'}
+                            {log.silo4?.jenisMasuk === 'bulky' && <span className="block text-[8px] text-blue-500">Bulky</span>}
+                          </td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">{calcPakai(log.silo4?.awal, log.silo4?.masuk, log.silo4?.akhir)}</td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">{log.silo4?.akhir || 0}</td>
+                        </tr>
+                        <tr className="hover:bg-slate-50/50 transition-colors bg-amber-50/20">
+                          <td className="p-3 sm:px-4 sm:py-3 font-bold text-amber-900">
+                             Tapioka <span className="block text-[9px] text-amber-700/60 font-semibold">{log.tapioka?.merk}</span>
+                          </td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">{log.tapioka?.awal || 0}</td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">{log.tapioka?.masuk || '-'}</td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">{calcPakai(log.tapioka?.awal, log.tapioka?.masuk, log.tapioka?.akhir)}</td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">{log.tapioka?.akhir || 0}</td>
+                        </tr>
+                        <tr className="hover:bg-slate-50/50 transition-colors bg-indigo-50/20">
+                          <td className="p-3 sm:px-4 sm:py-3 font-bold text-indigo-900">
+                             Gula <span className="block text-[9px] text-indigo-700/60 font-semibold">{log.gula?.merk}</span>
+                          </td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right text-slate-400">-</td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right text-slate-400">-</td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right text-slate-400 bg-blue-50/30">-</td>
+                          <td className="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">{log.gula?.akhir || 0}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                 </div>
+
+                 {log.catatanOpname && log.catatanOpname.trim() !== '' && (
+                    <div className="bg-blue-50/50 p-4 border-t border-blue-100">
+                      <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1.5 flex items-center">
+                        <PenTool size={12} className="mr-1.5" /> Catatan Opname Shift Ini:
+                      </h4>
+                      <p className="text-xs sm:text-sm text-slate-700 font-medium italic whitespace-pre-wrap leading-relaxed border-l-2 border-blue-300 pl-3">
+                        "{log.catatanOpname}"
+                      </p>
+                    </div>
+                 )}
+               </Card>
+             );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const BulkyForm = ({ user, logs, onSave }) => {
+  const { shift: autoShift, date: autoDate } = useMemo(() => getCurrentShiftInfo(), []);
+  const currentWeekNumber = useMemo(() => getWeekNumber(new Date()), []);
+  const [filterWeek, setFilterWeek] = useState(currentWeekNumber.toString());
+  const [filterDay, setFilterDay] = useState('all');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [formData, setFormData] = useState({
+    tanggal: autoDate, shift: autoShift, 
+    noBulky: '', merk: '',
+    jamMasuk: '', jamRelease: '', jamBongkar: '', jamSelesai: '',
+    qtyAwal: '', qtyAkhir: ''
+  });
+
+  const handleAddLog = async (e) => {
+    e.preventDefault();
+    if(!formData.noBulky || !formData.merk) return;
+    setIsSaving(true);
+    
+    const newLog = {
+      ...formData, 
+      id: Date.now(),
+      timestamp: new Date(formData.tanggal).getTime()
+    };
+    
+    await onSave({ action: 'saveBulky', payload: newLog });
+    
+    setFormData(prev => ({...prev, noBulky: '', merk: '', jamMasuk: '', jamRelease: '', jamBongkar: '', jamSelesai: '', qtyAwal: '', qtyAkhir: ''}));
+    setIsSaving(false);
+  };
+  
+  const recapData = useMemo(() => {
+    const recap = {};
+    (logs || []).forEach(log => {
+      const logDate = new Date(log.timestamp);
+      const logWeek = getWeekNumber(logDate).toString();
+      const logDay = getDayName(log.tanggal).toLowerCase();
+
+      const weekMatches = filterWeek === 'all' || logWeek === filterWeek.toString();
+      const dayMatches = filterDay === 'all' || logDay === filterDay.toLowerCase();
+
+      if (weekMatches && dayMatches) {
+        const merk = log.merk.toUpperCase();
+        const susut = (Number(log.qtyAwal) || 0) - (Number(log.qtyAkhir) || 0);
+        if (!recap[merk]) recap[merk] = { totalAwal: 0, totalSusut: 0, count: 0 };
+        recap[merk].totalAwal += (Number(log.qtyAwal) || 0);
+        recap[merk].totalSusut += susut;
+        recap[merk].count += 1;
+      }
+    });
+    return recap;
+  }, [logs, filterWeek, filterDay]);
+
+  const handleShareRecap = () => {
+    let msg = `*REKAP BONGKAR BULKY*\n`;
+    msg += `Minggu: ${filterWeek === 'all' ? 'Semua Minggu' : `Ke-${filterWeek}`}\n`;
+    msg += `Hari: ${filterDay === 'all' ? 'Semua Hari' : filterDay.charAt(0).toUpperCase() + filterDay.slice(1)}\n`;
+    msg += `Tahun: ${new Date().getFullYear()}\n\n`;
+    
+    if (Object.keys(recapData).length === 0) {
+        msg += `Belum ada data bongkar sesuai filter.`;
+    } else {
+        Object.keys(recapData).forEach(merk => {
+            msg += `*${merk}*\n`;
+            msg += `- Total Kendaraan: ${recapData[merk].count}\n`;
+            msg += `- Total Muatan: ${recapData[merk].totalAwal} kg\n`;
+            msg += `- Total Susut: ${recapData[merk].totalSusut} kg\n\n`;
+        });
+    }
+    
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in pb-8">
+      <Card className="bg-slate-900 text-white border-none relative overflow-visible shadow-xl shadow-slate-900/20" padding="p-5 sm:p-6">
+        <div className="absolute inset-0 overflow-hidden rounded-[1.5rem] pointer-events-none z-0">
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500 rounded-full mix-blend-screen filter blur-3xl opacity-30"></div>
+        </div>
+        <div className="flex justify-between items-end mb-4 relative z-10 border-b border-white/10 pb-4">
+          <div>
+            <h2 className="text-lg sm:text-xl font-black mb-1 flex items-center tracking-tight">
+              <CalendarDays className="mr-2 text-blue-400" size={20}/> Rekap Bulky
+            </h2>
+            <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Analitik Bongkaran</p>
+          </div>
+          <button onClick={handleShareRecap} className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black flex items-center transition-all shadow-sm active:scale-95 uppercase tracking-wider backdrop-blur-sm">
+            <Share2 size={14} className="mr-1.5"/> Share
+          </button>
+        </div>
+
+        <div className="relative z-10 grid grid-cols-2 gap-3 mb-5">
+           <div className="bg-white/10 rounded-xl p-1 border border-white/10 flex items-center">
+             <Filter size={14} className="text-blue-300 ml-2 mr-1 shrink-0" />
+             <CustomWeekSearch value={filterWeek} onChange={setFilterWeek} />
+           </div>
+           
+           <div className="bg-white/10 rounded-xl p-1 border border-white/10 flex items-center">
+             <CalendarDays size={14} className="text-blue-300 ml-2 mr-1 shrink-0" />
+             <select 
+                value={filterDay} 
+                onChange={(e) => setFilterDay(e.target.value)}
+                className="w-full bg-transparent text-white text-xs font-bold p-2 outline-none appearance-none"
+             >
+                <option value="all" className="text-slate-800">Semua Hari</option>
+                {DAYS_OF_WEEK.map(day => (
+                  <option key={day} value={day} className="text-slate-800">{day}</option>
+                ))}
+             </select>
+           </div>
+        </div>
+        
+        <div className="space-y-3 relative z-10">
+          {Object.keys(recapData).length === 0 ? (
+            <div className="bg-white/5 rounded-2xl p-4 sm:p-5 text-center border border-white/5">
+               <p className="text-xs sm:text-sm text-slate-400 font-medium">Belum ada data bongkar sesuai filter.</p>
+            </div>
+          ) : (
+            Object.keys(recapData).map(merk => (
+              <div key={merk} className="bg-white/10 p-3 sm:p-4 rounded-xl sm:rounded-2xl flex justify-between items-center backdrop-blur-md border border-white/5">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="bg-white/10 w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-white border border-white/10">
+                    <Truck size={20} strokeWidth={2}/>
+                  </div>
+                  <div>
+                    <span className="font-black text-base sm:text-lg block leading-none mb-1 sm:mb-1.5">{merk}</span>
+                    <span className="text-[9px] sm:text-[10px] text-slate-300 font-bold uppercase tracking-widest">{recapData[merk].count} Kendaraan</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="block font-black text-lg sm:text-xl">{recapData[merk].totalAwal} <span className="text-[10px] sm:text-xs font-semibold opacity-60">kg</span></span>
+                  <span className="text-[9px] sm:text-[10px] text-rose-300 font-black bg-rose-500/20 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md mt-1 sm:mt-1.5 inline-block uppercase tracking-wider">
+                    Susut: {recapData[merk].totalSusut} kg
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+
+      {/* Sembunyikan Form Input jika Role adalah Viewer */}
+      {user?.role === 'operator' && (
+        <Card>
+          <div className="flex justify-between items-center mb-5 sm:mb-6 border-b border-slate-100 pb-3 sm:pb-4">
+            <h2 className="text-lg sm:text-xl font-black text-slate-800 flex items-center tracking-tight">
+              <div className="p-2 sm:p-2.5 bg-blue-100 text-blue-700 rounded-xl mr-3"><Truck size={18} strokeWidth={2.5}/></div>
+              Input Data Bulky
+            </h2>
+          </div>
+          
+          <form onSubmit={handleAddLog}>
+            <div className="grid grid-cols-2 gap-3 mb-2">
+              <div className="relative group w-full mb-4">
+                 <input type="date" value={formData.tanggal} onChange={(e) => setFormData({...formData, tanggal: e.target.value})} className="block w-full px-4 py-3.5 text-sm sm:text-base font-bold text-slate-900 bg-white border border-slate-200 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm custom-date-input" required/>
+                 <label className="absolute -top-2.5 left-3 px-1 bg-white text-[9px] sm:text-[10px] font-black text-blue-600 uppercase tracking-widest">Tanggal</label>
+              </div>
+              <ModernSelect label="Shift" value={formData.shift} onChange={(e) => setFormData({...formData, shift: e.target.value})} options={['1', '2', '3']} />
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FloatingInput label="No Kendaraan / No Bulky" value={formData.noBulky} onChange={(e) => setFormData({...formData, noBulky: e.target.value})} required />
+              <FloatingInput label="Merk Terigu" value={formData.merk} onChange={(e) => setFormData({...formData, merk: e.target.value})} required />
+            </div>
+            
+            <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 mt-2 mb-4 sm:mb-5 shadow-inner">
+              <p className="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 sm:mb-4 flex items-center">
+                <Clock size={12} className="mr-1.5"/> Timeline Proses
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <FloatingInput label="Masuk" type="time" value={formData.jamMasuk} onChange={(e) => setFormData({...formData, jamMasuk: e.target.value})} required/>
+                <FloatingInput label="Release" type="time" value={formData.jamRelease} onChange={(e) => setFormData({...formData, jamRelease: e.target.value})} required/>
+                <FloatingInput label="Bongkar" type="time" value={formData.jamBongkar} onChange={(e) => setFormData({...formData, jamBongkar: e.target.value})} required/>
+                <FloatingInput label="Selesai" type="time" value={formData.jamSelesai} onChange={(e) => setFormData({...formData, jamSelesai: e.target.value})} required/>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 items-start bg-slate-50 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-inner">
+               <FloatingInput label="Timb. Awal" type="number" suffix="kg" value={formData.qtyAwal} onChange={(e) => setFormData({...formData, qtyAwal: e.target.value})} required/>
+               <FloatingInput label="Timb. Akhir" type="number" suffix="kg" value={formData.qtyAkhir} onChange={(e) => setFormData({...formData, qtyAkhir: e.target.value})} required/>
+            </div>
+
+            <button type="submit" disabled={isSaving} className="w-full mt-5 sm:mt-6 bg-slate-900 hover:bg-black text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl font-black transition-all shadow-xl shadow-slate-900/20 active:scale-95 flex justify-center items-center text-sm disabled:opacity-70 disabled:cursor-wait">
+              {isSaving ? <RefreshCw className="animate-spin mr-2" size={18}/> : <Save size={18} className="mr-2"/>} 
+              {isSaving ? 'Menyimpan...' : 'Simpan Log'}
+            </button>
+          </form>
+        </Card>
+      )}
+      
+      {logs && logs.length > 0 && (
+         <div className="space-y-3">
+           <h3 className="font-black text-slate-800 text-xs sm:text-sm ml-2 uppercase tracking-widest">Log Terbaru</h3>
+           {logs.slice(0,3).map(log => (
+             <Card key={log.id} padding="p-3 sm:p-4" className="flex justify-between items-center">
+                <div>
+                  <span className="font-black block text-sm sm:text-base text-slate-800">{log.noBulky}</span>
+                  <span className="text-[10px] sm:text-xs font-bold text-slate-500">{log.merk} • Shift {log.shift}</span>
+                </div>
+                <div className="text-right">
+                  <span className="block font-black text-blue-600 text-sm sm:text-base">{log.qtyAwal} kg</span>
+                  <span className="text-[9px] sm:text-[10px] font-bold text-slate-400">{formatDate(log.tanggal)}</span>
+                </div>
+             </Card>
+           ))}
+         </div>
+      )}
+    </div>
+  );
+};
+
+const MaintenanceForm = ({ user, logs, onSave }) => {
+  const { shift: autoShift, date: autoDate } = useMemo(() => getCurrentShiftInfo(), []);
+  const [toast, setToast] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [formData, setFormData] = useState({
+    tanggal: autoDate,
+    shift: autoShift,
+    grup: 'A',
+    part: '',
+    kendala: '',
+    perbaikan: ''
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    const newLog = {
+      ...formData,
+      id: Date.now(),
+      timestamp: new Date().toISOString()
+    };
+
+    await onSave({ action: 'saveMaintenance', payload: newLog });
+    
+    setFormData(prev => ({
+      ...prev,
+      part: '',
+      kendala: '',
+      perbaikan: ''
+    }));
+    setIsSaving(false);
+    setToast('Laporan kendala disimpan');
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleShare = (log) => {
+    const hari = getDayName(log.tanggal);
+    const tgl = formatDate(log.tanggal);
+    
+    let msg = `*LAPORAN KENDALA MESIN MHS*\n\n`;
+    msg += `Hari/Tanggal : ${hari}, ${tgl}\n`;
+    msg += `Shift : ${log.shift} (Grup ${log.grup})\n\n`;
+    msg += `*⚙️ Part Kendala:*\n${log.part}\n\n`;
+    msg += `*⚠️ Detail Kendala:*\n${log.kendala}\n\n`;
+    msg += `*🔧 Tindakan Perbaikan:*\n${log.perbaikan}\n`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  const groupedLogs = (logs || []).reduce((acc, log) => {
+    if (!acc[log.tanggal]) acc[log.tanggal] = [];
+    acc[log.tanggal].push(log);
+    return acc;
+  }, {});
+
+  const sortedDates = Object.keys(groupedLogs).sort((a, b) => new Date(b) - new Date(a));
+
+  return (
+    <div className="space-y-6 animate-fade-in pb-8">
+      <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-md text-white px-4 py-3 sm:px-6 sm:py-4 rounded-full shadow-2xl text-xs sm:text-sm font-bold flex items-center z-50 transition-all duration-300 border border-slate-700/50 ${toast ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-10 scale-95 pointer-events-none'}`}>
+        <CheckCircle2 size={18} className="mr-2 sm:mr-3 text-emerald-400" /> {toast}
+      </div>
+
+      {user?.role === 'operator' && (
+        <Card className="bg-gradient-to-br from-indigo-600 to-indigo-900 text-white border-none relative overflow-hidden shadow-xl shadow-indigo-900/20" padding="p-5 sm:p-6">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full mix-blend-overlay filter blur-xl opacity-50"></div>
+          <div className="relative z-10">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight flex items-center">
+                <AlertTriangle className="mr-2 sm:mr-2.5 text-indigo-300" size={22} /> Lapor Kendala
+              </h2>
+            </div>
+            <p className="text-[10px] sm:text-xs text-indigo-200 font-medium leading-relaxed mb-5 sm:mb-6">
+              Catat setiap kerusakan atau anomali mesin secara detail untuk riwayat perbaikan MHS.
+            </p>
+
+            <form onSubmit={handleSubmit} className="bg-white/10 p-4 sm:p-5 rounded-2xl sm:rounded-3xl backdrop-blur-md border border-white/20">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
+                <div className="col-span-1">
+                  <label className="block text-[9px] sm:text-[10px] font-black text-indigo-200 mb-1 sm:mb-1.5 uppercase tracking-widest">Shift</label>
+                  <select value={formData.shift} onChange={(e) => setFormData({...formData, shift: e.target.value})} className="w-full bg-white/20 text-white text-xs sm:text-sm font-bold p-2 sm:p-2.5 rounded-lg sm:rounded-xl outline-none appearance-none border border-white/10">
+                    <option value="1" className="text-slate-800">S.1</option>
+                    <option value="2" className="text-slate-800">S.2</option>
+                    <option value="3" className="text-slate-800">S.3</option>
+                  </select>
+                </div>
+                <div className="col-span-1">
+                  <label className="block text-[9px] sm:text-[10px] font-black text-indigo-200 mb-1 sm:mb-1.5 uppercase tracking-widest">Grup</label>
+                  <select value={formData.grup} onChange={(e) => setFormData({...formData, grup: e.target.value})} className="w-full bg-white/20 text-white text-xs sm:text-sm font-bold p-2 sm:p-2.5 rounded-lg sm:rounded-xl outline-none appearance-none border border-white/10">
+                    <option value="A" className="text-slate-800">Gr A</option>
+                    <option value="B" className="text-slate-800">Gr B</option>
+                    <option value="C" className="text-slate-800">Gr C</option>
+                    <option value="D" className="text-slate-800">Gr D</option>
+                  </select>
+                </div>
+                <div className="col-span-1">
+                   <label className="block text-[9px] sm:text-[10px] font-black text-indigo-200 mb-1 sm:mb-1.5 uppercase tracking-widest">Tgl</label>
+                   <input type="date" value={formData.tanggal} onChange={(e) => setFormData({...formData, tanggal: e.target.value})} className="w-full bg-white/20 text-white text-xs sm:text-sm font-bold p-2 sm:p-2.5 rounded-lg sm:rounded-xl outline-none border border-white/10 custom-date-input" />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Settings2 size={16} className="text-indigo-200" />
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Part Yang Kendala" 
+                    value={formData.part}
+                    onChange={(e) => setFormData({...formData, part: e.target.value})}
+                    required
+                    className="w-full bg-white/20 text-white placeholder-indigo-200/70 text-xs sm:text-sm font-semibold pl-9 pr-3 py-2.5 sm:py-3 rounded-xl outline-none border border-white/10 focus:bg-white/30 transition-colors"
+                  />
+                </div>
+                
+                <div className="relative">
+                  <div className="absolute top-3 left-3 pointer-events-none">
+                    <AlertCircle size={16} className="text-indigo-200" />
+                  </div>
+                  <textarea 
+                    placeholder="Detail Masalah..." 
+                    value={formData.kendala}
+                    onChange={(e) => setFormData({...formData, kendala: e.target.value})}
+                    required
+                    rows="2"
+                    className="w-full bg-white/20 text-white placeholder-indigo-200/70 text-xs sm:text-sm font-semibold pl-9 pr-3 py-2.5 sm:py-3 rounded-xl outline-none border border-white/10 focus:bg-white/30 transition-colors resize-none"
+                  />
+                </div>
+
+                <div className="relative">
+                  <div className="absolute top-3 left-3 pointer-events-none">
+                    <Wrench size={16} className="text-indigo-200" />
+                  </div>
+                  <textarea 
+                    placeholder="Tindakan Perbaikan..." 
+                    value={formData.perbaikan}
+                    onChange={(e) => setFormData({...formData, perbaikan: e.target.value})}
+                    required
+                    rows="2"
+                    className="w-full bg-white/20 text-white placeholder-indigo-200/70 text-xs sm:text-sm font-semibold pl-9 pr-3 py-2.5 sm:py-3 rounded-xl outline-none border border-white/10 focus:bg-white/30 transition-colors resize-none"
+                  />
+                </div>
+              </div>
+
+              <button type="submit" disabled={isSaving} className="w-full mt-4 bg-white text-indigo-800 hover:bg-indigo-50 py-3 rounded-xl font-black transition-all shadow-lg shadow-black/10 active:scale-95 flex justify-center items-center text-sm disabled:opacity-70 disabled:cursor-wait">
+                {isSaving ? <RefreshCw className="animate-spin mr-2" size={16}/> : <Save size={16} className="mr-2"/>} 
+                {isSaving ? 'Menyimpan...' : 'Simpan Log'}
+              </button>
+            </form>
+          </div>
+        </Card>
+      )}
+
+      <div className="pt-2">
+        <h3 className="font-black text-slate-800 text-base sm:text-lg mb-4 flex items-center">
+          <History className="mr-2 text-slate-400" size={18} /> Riwayat Perbaikan
+        </h3>
+        
+        {sortedDates.length === 0 ? (
+          <div className="text-center p-6 sm:p-8 bg-slate-50 rounded-2xl sm:rounded-3xl border border-slate-200 border-dashed">
+            <Settings2 size={28} className="mx-auto text-slate-300 mb-2 sm:mb-3" />
+            <p className="text-xs sm:text-sm font-semibold text-slate-500">Belum ada riwayat kendala.</p>
+          </div>
+        ) : (
+          <div className="space-y-5 sm:space-y-6">
+            {sortedDates.map(date => (
+              <div key={date}>
+                <div className="sticky top-0 z-10 bg-[#F4F7F9]/90 backdrop-blur py-2 mb-2 sm:mb-3">
+                  <span className="text-[9px] sm:text-[10px] font-black bg-slate-200 text-slate-600 px-2 sm:px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">
+                    {formatDate(date)}
+                  </span>
+                </div>
+                <div className="space-y-3 sm:space-y-4 border-l-2 border-slate-200 ml-2 sm:ml-3 pl-3 sm:pl-4">
+                  {groupedLogs[date].map((log, index) => (
+                    <Card key={log.id} padding="p-0" className="relative group hover:-translate-y-1 border-t-4 border-t-transparent hover:border-t-indigo-500">
+                      <div className="absolute w-2.5 h-2.5 sm:w-3 sm:h-3 bg-white border-2 border-slate-300 rounded-full -left-[19px] sm:-left-[23px] top-4 group-hover:border-indigo-500 transition-colors"></div>
+                      
+                      <div className="p-3 sm:p-4 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <Badge variant="warning">Shift {log.shift}</Badge>
+                          <Badge variant="slate">Grup {log.grup}</Badge>
+                        </div>
+                        <button 
+                          onClick={() => handleShare(log)}
+                          className="text-slate-400 hover:text-green-600 transition-colors bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm"
+                          title="Bagikan ke WhatsApp"
+                        >
+                          <Share2 size={12} className="sm:w-[14px] sm:h-[14px]" />
+                        </button>
+                      </div>
+                      
+                      <div className="p-3 sm:p-4 space-y-2.5 sm:space-y-3">
+                        <div>
+                          <p className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Part Kendala</p>
+                          <p className="text-sm sm:text-base font-black text-slate-800 leading-tight">{log.part}</p>
+                        </div>
+                        
+                        <div className="bg-amber-50/50 p-2.5 sm:p-3 rounded-xl border border-amber-100">
+                          <p className="text-[9px] sm:text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1 flex items-center">
+                            <AlertCircle size={10} className="sm:w-3 sm:h-3 mr-1"/> Detail Masalah
+                          </p>
+                          <p className="text-xs sm:text-sm font-semibold text-slate-700">{log.kendala}</p>
+                        </div>
+                        
+                        <div className="bg-emerald-50/50 p-2.5 sm:p-3 rounded-xl border border-emerald-100">
+                          <p className="text-[9px] sm:text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1 flex items-center">
+                            <Wrench size={10} className="sm:w-3 sm:h-3 mr-1"/> Tindakan
+                          </p>
+                          <p className="text-xs sm:text-sm font-semibold text-slate-700">{log.perbaikan}</p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const LoginScreen = ({ onLogin, isLoading }) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+
+  return (
+    <div className="flex flex-col h-screen bg-[#0B1B3D] justify-center items-center p-4">
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
+      <div className="absolute top-10 right-10 w-64 h-64 bg-blue-500/20 rounded-full mix-blend-screen filter blur-3xl"></div>
+      <div className="absolute bottom-10 left-10 w-64 h-64 bg-indigo-500/20 rounded-full mix-blend-screen filter blur-3xl"></div>
+      
+      <div className="w-full max-w-sm z-10">
+        <div className="text-center mb-10 animate-fade-in">
+          <div className="bg-white/10 w-20 h-20 mx-auto rounded-3xl shadow-inner border border-white/20 backdrop-blur-md flex items-center justify-center mb-4">
+            <Building2 size={40} className="text-white drop-shadow-md" />
+          </div>
+          <h1 className="text-4xl font-black tracking-tight leading-none mb-1 text-white flex items-center justify-center">
+            MHS<span className="text-blue-400 font-bold ml-0.5">Pro</span>
+          </h1>
+          <p className="text-[10px] font-bold text-blue-200 uppercase tracking-[0.25em]">Smart Operations</p>
+        </div>
+
+        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 shadow-2xl animate-fade-in" style={{animationDelay: '0.1s'}}>
+          <form onSubmit={(e) => { e.preventDefault(); onLogin(username, password); }}>
+            <div className="space-y-4">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <UserCircle size={20} className="text-blue-200" />
+                </div>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="Username" 
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full bg-white/10 text-white placeholder-blue-200/50 font-bold pl-12 pr-4 py-4 rounded-2xl outline-none border border-white/10 focus:border-blue-400 focus:bg-white/20 transition-all"
+                />
+              </div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <KeyRound size={20} className="text-blue-200" />
+                </div>
+                <input 
+                  type="password" 
+                  required
+                  placeholder="Password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-white/10 text-white placeholder-blue-200/50 font-bold pl-12 pr-4 py-4 rounded-2xl outline-none border border-white/10 focus:border-blue-400 focus:bg-white/20 transition-all"
+                />
+              </div>
+            </div>
+            
+            <button 
+              type="submit" 
+              disabled={isLoading}
+              className="w-full mt-8 bg-blue-500 hover:bg-blue-400 text-white py-4 rounded-2xl font-black transition-all shadow-lg shadow-blue-500/30 active:scale-95 flex justify-center items-center disabled:opacity-70 disabled:cursor-wait"
+            >
+              {isLoading ? <RefreshCw className="animate-spin mr-2" /> : 'Masuk Aplikasi'}
+            </button>
+          </form>
+          
+          <p className="text-center text-[10px] text-blue-200/50 font-semibold mt-6 uppercase tracking-wider">
+            Pastikan API URL sudah di-setup
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const App = () => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [user, setUser] = useState(null); // { username: '', role: 'operator' | 'viewer' }
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [db, setDb] = useState({
+    lastStock: null,
+    opnameLogs: [],
+    bulkyLogs: [],
+    maintenanceLogs: []
+  });
+
+  useEffect(() => {
+    const styleId = 'mhs-pro-modern-styles';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+        
+        body { 
+          font-family: 'Plus Jakarta Sans', sans-serif; 
+          -webkit-tap-highlight-color: transparent; 
+          background-color: #F4F7F9;
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(15px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+          animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 24px); }
+        
+        .ease-spring {
+          transition-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .custom-date-input::-webkit-calendar-picker-indicator {
+           background: transparent; bottom: 0; color: transparent; cursor: pointer;
+           height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto;
+        }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        html, body { overflow-x: hidden; }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
+  const handleLogin = async (username, password) => {
+    if(!API_URL.includes("script.google.com")) {
+      alert("Mohon set API_URL terlebih dahulu di source code (App.jsx baris ke-16)");
+      return;
+    }
+    
+    setIsAuthLoading(true);
+    try {
+      const res = await fetch(`${API_URL}?action=login&username=${username}&password=${password}`);
+      const data = await res.json();
+      if (data.success) {
+        setUser({ username: data.username, role: data.role });
+        fetchData();
+      } else {
+        alert("Login Gagal: Username atau Password salah.");
+      }
+    } catch (err) {
+      alert("Error koneksi ke server. Pastikan API URL benar.");
+      console.error(err);
+    }
+    setIsAuthLoading(false);
+  };
+
+  const fetchData = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch(`${API_URL}?action=getData`);
+      const data = await res.json();
+      setDb(data);
+    } catch (err) {
+      console.error("Failed to fetch data", err);
+    }
+    setIsSyncing(false);
+  };
+
+  const handlePostData = async (payloadData) => {
+    try {
+      // Optimistic update UI
+      if(payloadData.action === 'saveOpname') {
+        setDb(prev => ({
+          ...prev,
+          lastStock: { ...prev.lastStock, ...payloadData.payload.stock },
+          opnameLogs: [payloadData.payload.log, ...(prev.opnameLogs || [])]
+        }));
+      } else if (payloadData.action === 'saveBulky') {
+        setDb(prev => ({ ...prev, bulkyLogs: [payloadData.payload, ...(prev.bulkyLogs || [])] }));
+      } else if (payloadData.action === 'saveMaintenance') {
+        setDb(prev => ({ ...prev, maintenanceLogs: [payloadData.payload, ...(prev.maintenanceLogs || [])] }));
+      }
+
+      // Send to server
+      await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payloadData)
+      });
+      
+    } catch (err) {
+      console.error("Error saving data", err);
+      alert("Gagal menyimpan data ke server.");
+    }
+  };
+
+  if (!user) {
+    return <LoginScreen onLogin={handleLogin} isLoading={isAuthLoading} />;
+  }
+
+  return (
+    <Layout 
+      activeTab={activeTab} 
+      setActiveTab={setActiveTab} 
+      user={user} 
+      onLogout={() => setUser(null)}
+      isSyncing={isSyncing}
+      handleSync={fetchData}
+    >
+      {activeTab === 'dashboard' && <Dashboard db={db} />}
+      {activeTab === 'stock' && user.role === 'operator' && <StockForm db={db} onSave={handlePostData} />}
+      {activeTab === 'recap' && <OpnameRecap logs={db.opnameLogs || []} />}
+      {activeTab === 'bulky' && <BulkyForm user={user} logs={db.bulkyLogs || []} onSave={handlePostData} />}
+      {activeTab === 'maintenance' && <MaintenanceForm user={user} logs={db.maintenanceLogs || []} onSave={handlePostData} />}
+    </Layout>
+  );
+};
+
+export default App;
