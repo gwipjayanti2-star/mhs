@@ -77,7 +77,6 @@
             medium: ['W3', 'LAINNYA']
         };
 
-        // Helpers
         const getWeekNumber = (date) => {
             const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
             const dayNum = d.getUTCDay() || 7;
@@ -121,6 +120,29 @@
             return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
         };
 
+        const formatDateToYYYYMMDD = (dateStr) => {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        };
+
+        // Formatter khusus untuk membaca waktu dari Google Sheets (menghindari error ISO string)
+        const formatTime = (timeStr) => {
+            if (!timeStr || timeStr === '-') return '-';
+            if (typeof timeStr === 'string') {
+                if (/^\d{2}:\d{2}$/.test(timeStr)) return timeStr;
+                if (/^\d{2}:\d{2}:\d{2}/.test(timeStr)) return timeStr.substring(0, 5);
+            }
+            try {
+                const d = new Date(timeStr);
+                if (!isNaN(d.getTime())) {
+                    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+                }
+            } catch (e) {}
+            return String(timeStr);
+        };
+
         const calcPakai = (awal, totalMasuk, akhir) => {
             if (akhir === '' || akhir === null || akhir === undefined) return 0;
             const p = (Number(awal) || 0) + (Number(totalMasuk) || 0) - (Number(akhir) || 0);
@@ -153,7 +175,6 @@
                 selectedMerkRecap: null 
             },
 
-            // --- Core Methods ---
             render: function() {
                 const root = document.getElementById('root');
                 if (!this.state.user) {
@@ -188,7 +209,7 @@
                 this.state.activeTab = tabId;
                 this.renderActiveTab();
                 this.updateNavIndicator();
-                // Update nav item styles
+                
                 document.querySelectorAll('.nav-item').forEach(el => {
                     const id = el.dataset.id;
                     const iconContainer = el.querySelector('.icon-container');
@@ -276,14 +297,12 @@
                 document.body.appendChild(div);
                 lucide.createIcons({root: div});
                 
-                // Auto close
                 setTimeout(() => {
                     const el = document.getElementById('success-modal');
                     if(el) el.remove();
                 }, 3500);
             },
 
-            // --- API & Actions ---
             login: async function(e) {
                 e.preventDefault();
                 const username = document.getElementById('login-username').value;
@@ -374,7 +393,6 @@
                         if(this.state.activeTab === 'maintenance') this.renderActiveTab();
                     }
 
-                    // Meratakan (flatten) data agar tidak menjadi format JSON
                     const params = new URLSearchParams();
                     params.append('action', payloadData.action);
                     
@@ -398,14 +416,9 @@
                         }
                     };
                     
-                    if (payloadData.payload) {
-                        flatten(payloadData.payload);
-                    }
+                    if (payloadData.payload) flatten(payloadData.payload);
 
-                    await fetch(API_URL, {
-                        method: 'POST',
-                        body: params
-                    });
+                    await fetch(API_URL, { method: 'POST', body: params });
                 } catch (err) {
                     console.error("Error saving data", err);
                     this.showGlobalMessage("Gagal menyimpan data ke server.");
@@ -511,33 +524,17 @@
                                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                             <i data-lucide="user-circle" class="text-blue-200" style="width: 20px; height: 20px;"></i>
                                         </div>
-                                        <input 
-                                            type="text" 
-                                            id="login-username"
-                                            required
-                                            placeholder="Username" 
-                                            class="w-full bg-white/10 text-white placeholder-blue-200/50 font-bold pl-12 pr-4 py-4 rounded-2xl outline-none border border-white/10 focus:border-blue-400 focus:bg-white/20 transition-all"
-                                        />
+                                        <input type="text" id="login-username" required placeholder="Username" class="w-full bg-white/10 text-white placeholder-blue-200/50 font-bold pl-12 pr-4 py-4 rounded-2xl outline-none border border-white/10 focus:border-blue-400 focus:bg-white/20 transition-all"/>
                                     </div>
                                     <div class="relative">
                                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                             <i data-lucide="key-round" class="text-blue-200" style="width: 20px; height: 20px;"></i>
                                         </div>
-                                        <input 
-                                            type="password" 
-                                            id="login-password"
-                                            required
-                                            placeholder="Password" 
-                                            class="w-full bg-white/10 text-white placeholder-blue-200/50 font-bold pl-12 pr-4 py-4 rounded-2xl outline-none border border-white/10 focus:border-blue-400 focus:bg-white/20 transition-all"
-                                        />
+                                        <input type="password" id="login-password" required placeholder="Password" class="w-full bg-white/10 text-white placeholder-blue-200/50 font-bold pl-12 pr-4 py-4 rounded-2xl outline-none border border-white/10 focus:border-blue-400 focus:bg-white/20 transition-all"/>
                                     </div>
                                 </div>
                                 
-                                <button 
-                                    type="submit" 
-                                    ${app.state.isAuthLoading ? 'disabled' : ''}
-                                    class="w-full mt-8 bg-blue-500 hover:bg-blue-400 text-white py-4 rounded-2xl font-black transition-all shadow-lg shadow-blue-500/30 active:scale-95 flex justify-center items-center disabled:opacity-70 disabled:cursor-wait"
-                                >
+                                <button type="submit" ${app.state.isAuthLoading ? 'disabled' : ''} class="w-full mt-8 bg-blue-500 hover:bg-blue-400 text-white py-4 rounded-2xl font-black transition-all shadow-lg shadow-blue-500/30 active:scale-95 flex justify-center items-center disabled:opacity-70 disabled:cursor-wait">
                                     ${app.state.isAuthLoading ? '<i data-lucide="refresh-cw" class="animate-spin mr-2"></i>' : 'Masuk Aplikasi'}
                                 </button>
                                 
@@ -565,7 +562,7 @@
                 const createNavItem = (id, icon, label) => `
                     <button onclick="app.switchTab('${id}')" class="nav-item flex-1 flex flex-col items-center justify-center py-2 relative z-10 group outline-none" data-id="${id}">
                         <div class="icon-container transition-all duration-300 ${app.state.activeTab === id ? 'text-blue-600 transform -translate-y-1 drop-shadow-sm' : 'text-slate-400 group-hover:text-slate-600 group-hover:-translate-y-0.5'}">
-                            <i data-lucide="${icon}" style="width: ${app.state.activeTab === id ? '24px' : '22px'}; height: ${app.state.activeTab === id ? '24px' : '22px'};"></i>
+                            <i data-lucide="${icon}" style="width: ${app.state.activeTab === id ? '24px' : '24px'}; height: ${app.state.activeTab === id ? '24px' : '24px'};"></i>
                         </div>
                         <span class="nav-label text-[9px] sm:text-[10px] mt-1 transition-all duration-300 ${app.state.activeTab === id ? 'font-black text-blue-700' : 'font-bold text-slate-400'}">${label}</span>
                     </button>
@@ -984,7 +981,10 @@
                 let opnameBulkyModalHtml = '';
                 if (app.state.selectedOpnameForBulky) {
                     const { tanggal, shift } = app.state.selectedOpnameForBulky;
-                    const matchingBulky = app.state.db.bulkyLogs?.filter(b => b.tanggal === tanggal && b.shift === shift) || [];
+                    const opnameDate = formatDateToYYYYMMDD(tanggal);
+                    const matchingBulky = app.state.db.bulkyLogs?.filter(b => 
+                        formatDateToYYYYMMDD(b.tanggal) === opnameDate && String(b.shift) === String(shift)
+                    ) || [];
                     
                     opnameBulkyModalHtml = `
                     <div class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 animate-fade-in" onclick="Handlers.closeOpnameBulkyModal()">
@@ -1017,10 +1017,10 @@
                                             ${Components.Badge(log.tujuanSilo || 'Tidak ada data', 'primary')}
                                         </div>
                                         <div class="grid grid-cols-4 gap-2 text-center text-xs bg-slate-50 rounded-xl p-2 mb-3 border border-slate-100">
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Masuk</div><div class="font-semibold text-slate-700">${log.jamMasuk || '-'}</div></div>
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Release</div><div class="font-semibold text-slate-700">${log.jamRelease || '-'}</div></div>
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Bongkar</div><div class="font-semibold text-slate-700">${log.jamBongkar || '-'}</div></div>
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Selesai</div><div class="font-semibold text-slate-700">${log.jamSelesai || '-'}</div></div>
+                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Masuk</div><div class="font-semibold text-slate-700">${formatTime(log.jamMasuk)}</div></div>
+                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Release</div><div class="font-semibold text-slate-700">${formatTime(log.jamRelease)}</div></div>
+                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Bongkar</div><div class="font-semibold text-slate-700">${formatTime(log.jamBongkar)}</div></div>
+                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Selesai</div><div class="font-semibold text-slate-700">${formatTime(log.jamSelesai)}</div></div>
                                         </div>
                                         <div class="grid grid-cols-3 gap-2 text-center border-t border-slate-100 pt-3">
                                             <div><div class="text-[9px] text-slate-400 font-bold uppercase">Awal</div><div class="font-black text-slate-700">${log.qtyAwal}</div></div>
@@ -1146,33 +1146,33 @@
                 <div class="max-w-2xl mx-auto space-y-4 animate-fade-in pb-8">
                     ${opnameBulkyModalHtml}
                     ${Components.Card(`
-                        <div class="absolute inset-0 overflow-hidden rounded-[1.5rem] pointer-events-none z-0">
-                            <div class="absolute -top-10 -right-10 w-32 h-32 bg-blue-500 rounded-full mix-blend-screen filter blur-3xl opacity-30"></div>
-                        </div>
-                        <div class="flex justify-between items-center relative z-10 mb-4 border-b border-white/10 pb-4">
+                        <div class="flex justify-between items-center relative z-10 mb-4 border-b border-slate-200 pb-4">
                             <div>
-                                <h2 class="text-xl font-black mb-1 flex items-center tracking-tight">
-                                    <i data-lucide="file-clock" class="mr-2 text-blue-400" style="width: 22px; height: 22px;"></i> Riwayat Opname
+                                <h2 class="text-xl font-black mb-1 flex items-center tracking-tight text-slate-800">
+                                    <i data-lucide="file-clock" class="mr-2 text-blue-600" style="width: 22px; height: 22px;"></i> Riwayat Opname
                                 </h2>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tabel rekapitulasi per shift</p>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tabel rekapitulasi per shift</p>
                             </div>
+                            <button onclick="Handlers.exportOpnameExcel()" class="bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black flex items-center transition-all shadow-sm active:scale-95">
+                                <i data-lucide="file-spreadsheet" class="mr-1.5" style="width: 16px; height: 16px;"></i> Export
+                            </button>
                         </div>
                         
                         <div class="relative z-10 grid grid-cols-2 gap-3">
-                            <div class="bg-white/10 rounded-xl p-1 border border-white/10 flex items-center relative" id="week-search-container">
-                                <i data-lucide="filter" class="text-blue-300 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
+                            <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center relative" id="week-search-container">
+                                <i data-lucide="filter" class="text-blue-500 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
                                 <div class="relative w-full flex-1 min-w-0">
                                     <input type="text" id="week-search-input"
-                                        class="w-full bg-transparent text-white text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-blue-200/50 cursor-pointer truncate"
+                                        class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-slate-400 cursor-pointer truncate"
                                         placeholder="Ketik minggu (1-52)..."
                                         value="${filters.searchOpen ? filters.searchTxt : displayValue}"
                                         onfocus="Handlers.openRecapSearch()"
                                         oninput="Handlers.typeRecapSearch(this.value)"
                                     />
                                     ${filters.searchOpen ? `
-                                    <div class="absolute bottom-full left-0 min-w-[160px] w-full mb-2 bg-slate-800 border border-slate-700 rounded-xl shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.5)] max-h-[130px] overflow-y-auto z-[60] py-1">
+                                    <div class="absolute bottom-full left-0 min-w-[160px] w-full mb-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-[130px] overflow-y-auto z-[60] py-1">
                                         ${filteredWeeks.length > 0 ? filteredWeeks.map(w => `
-                                            <button type="button" onclick="Handlers.selectRecapWeek('${w.id}')" class="w-full text-left px-4 py-2.5 text-xs sm:text-sm text-slate-200 hover:bg-slate-700 hover:text-white font-bold transition-colors">
+                                            <button type="button" onclick="Handlers.selectRecapWeek('${w.id}')" class="w-full text-left px-4 py-2.5 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 font-bold transition-colors">
                                                 ${w.label}
                                             </button>
                                         `).join('') : '<div class="px-4 py-3 text-xs text-slate-400 font-medium">Tidak ada hasil</div>'}
@@ -1180,14 +1180,14 @@
                                 </div>
                             </div>
                             
-                            <div class="bg-white/10 rounded-xl p-1 border border-white/10 flex items-center">
-                                <i data-lucide="calendar-days" class="text-blue-300 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
-                                <select onchange="Handlers.changeRecapDay(this.value)" class="w-full bg-transparent text-white text-xs sm:text-sm font-bold p-2 outline-none appearance-none">
+                            <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center">
+                                <i data-lucide="calendar-days" class="text-blue-500 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
+                                <select onchange="Handlers.changeRecapDay(this.value)" class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold p-2 outline-none appearance-none">
                                     ${daysOptions}
                                 </select>
                             </div>
                         </div>
-                    `, 'bg-slate-900 text-white border-none relative overflow-visible shadow-xl shadow-slate-900/20', 'p-5 sm:p-6')}
+                    `, 'bg-white text-slate-800 border border-slate-200 shadow-sm relative overflow-visible', 'p-5 sm:p-6')}
                     ${listHtml}
                 </div>`;
             },
@@ -1210,7 +1210,7 @@
                 logs.forEach(log => {
                     const logDate = new Date(log.timestamp);
                     const logWeek = getWeekNumber(logDate).toString();
-                    const logDay = getDayName(log.tanggal).toLowerCase(); // Menggunakan tanggal bongkar
+                    const logDay = getDayName(log.tanggal).toLowerCase();
                     const weekMatches = filters.week === 'all' || logWeek === filters.week.toString();
                     const dayMatches = filters.day === 'all' || logDay === filters.day.toLowerCase();
 
@@ -1254,10 +1254,10 @@
                                             ${Components.Badge(log.tujuanSilo || 'Tidak ada data', 'primary')}
                                         </div>
                                         <div class="grid grid-cols-4 gap-2 text-center text-xs bg-slate-50 rounded-xl p-2 mb-3 border border-slate-100">
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Masuk</div><div class="font-semibold text-slate-700">${log.jamMasuk || '-'}</div></div>
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Release</div><div class="font-semibold text-slate-700">${log.jamRelease || '-'}</div></div>
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Bongkar</div><div class="font-semibold text-slate-700">${log.jamBongkar || '-'}</div></div>
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Selesai</div><div class="font-semibold text-slate-700">${log.jamSelesai || '-'}</div></div>
+                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Masuk</div><div class="font-semibold text-slate-700">${formatTime(log.jamMasuk)}</div></div>
+                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Release</div><div class="font-semibold text-slate-700">${formatTime(log.jamRelease)}</div></div>
+                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Bongkar</div><div class="font-semibold text-slate-700">${formatTime(log.jamBongkar)}</div></div>
+                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Selesai</div><div class="font-semibold text-slate-700">${formatTime(log.jamSelesai)}</div></div>
                                         </div>
                                         <div class="grid grid-cols-3 gap-2 text-center border-t border-slate-100 pt-3">
                                             <div><div class="text-[9px] text-slate-400 font-bold uppercase">Awal</div><div class="font-black text-slate-700">${log.qtyAwal} <span class="text-[9px] font-medium opacity-50">kg</span></div></div>
@@ -1284,36 +1284,38 @@
                     ${modalHtml}
                     
                     ${Components.Card(`
-                        <div class="absolute inset-0 overflow-hidden rounded-[1.5rem] pointer-events-none z-0">
-                            <div class="absolute -top-10 -right-10 w-32 h-32 bg-blue-500 rounded-full mix-blend-screen filter blur-3xl opacity-30"></div>
-                        </div>
-                        <div class="flex justify-between items-end mb-4 relative z-10 border-b border-white/10 pb-4">
+                        <div class="flex justify-between items-end mb-4 relative z-10 border-b border-slate-200 pb-4">
                             <div>
-                                <h2 class="text-lg sm:text-xl font-black mb-1 flex items-center tracking-tight">
-                                    <i data-lucide="calendar-days" class="mr-2 text-blue-400" style="width: 20px; height: 20px;"></i> Rekap Bulky
+                                <h2 class="text-lg sm:text-xl font-black mb-1 flex items-center tracking-tight text-slate-800">
+                                    <i data-lucide="calendar-days" class="mr-2 text-blue-600" style="width: 20px; height: 20px;"></i> Rekap Bulky
                                 </h2>
-                                <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Klik kartu untuk rincian</p>
+                                <p class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest">Klik kartu untuk rincian</p>
                             </div>
-                            <button onclick="Handlers.shareBulkyRecap()" class="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black flex items-center transition-all shadow-sm active:scale-95 uppercase tracking-wider backdrop-blur-sm">
-                                <i data-lucide="share-2" class="mr-1.5" style="width: 14px; height: 14px;"></i> Share
-                            </button>
+                            <div class="flex gap-2">
+                                <button onclick="Handlers.exportBulkyExcel()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black flex items-center transition-all shadow-sm active:scale-95 uppercase tracking-wider">
+                                    <i data-lucide="file-spreadsheet" class="mr-1.5" style="width: 14px; height: 14px;"></i> Export
+                                </button>
+                                <button onclick="Handlers.shareBulkyRecap()" class="bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black flex items-center transition-all shadow-sm active:scale-95 uppercase tracking-wider">
+                                    <i data-lucide="share-2" class="mr-1.5" style="width: 14px; height: 14px;"></i> Share
+                                </button>
+                            </div>
                         </div>
 
                         <div class="relative z-10 grid grid-cols-2 gap-3 mb-5">
-                            <div class="bg-white/10 rounded-xl p-1 border border-white/10 flex items-center relative">
-                                <i data-lucide="filter" class="text-blue-300 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
+                            <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center relative">
+                                <i data-lucide="filter" class="text-blue-500 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
                                 <div class="relative w-full flex-1 min-w-0">
-                                    <input type="text"
-                                        class="w-full bg-transparent text-white text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-blue-200/50 cursor-pointer truncate"
+                                    <input type="text" id="week-search-bulky"
+                                        class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-slate-400 cursor-pointer truncate"
                                         placeholder="Ketik minggu (1-52)..."
                                         value="${filters.searchOpen ? filters.searchTxt : displayValue}"
                                         onfocus="Handlers.openBulkySearch()"
                                         oninput="Handlers.typeBulkySearch(this.value)"
                                     />
                                     ${filters.searchOpen ? `
-                                    <div class="absolute bottom-full left-0 min-w-[160px] w-full mb-2 bg-slate-800 border border-slate-700 rounded-xl shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.5)] max-h-[130px] overflow-y-auto z-[60] py-1">
+                                    <div class="absolute bottom-full left-0 min-w-[160px] w-full mb-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-[130px] overflow-y-auto z-[60] py-1">
                                         ${filteredWeeks.length > 0 ? filteredWeeks.map(w => `
-                                            <button type="button" onclick="Handlers.selectBulkyWeek('${w.id}')" class="w-full text-left px-4 py-2.5 text-xs sm:text-sm text-slate-200 hover:bg-slate-700 hover:text-white font-bold transition-colors">
+                                            <button type="button" onclick="Handlers.selectBulkyWeek('${w.id}')" class="w-full text-left px-4 py-2.5 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 font-bold transition-colors">
                                                 ${w.label}
                                             </button>
                                         `).join('') : '<div class="px-4 py-3 text-xs text-slate-400 font-medium">Tidak ada hasil</div>'}
@@ -1321,9 +1323,9 @@
                                 </div>
                             </div>
                             
-                            <div class="bg-white/10 rounded-xl p-1 border border-white/10 flex items-center">
-                                <i data-lucide="calendar-days" class="text-blue-300 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
-                                <select onchange="Handlers.changeBulkyDay(this.value)" class="w-full bg-transparent text-white text-xs font-bold p-2 outline-none appearance-none">
+                            <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center">
+                                <i data-lucide="calendar-days" class="text-blue-500 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
+                                <select onchange="Handlers.changeBulkyDay(this.value)" class="w-full bg-transparent text-slate-800 text-xs font-bold p-2 outline-none appearance-none">
                                     ${daysOptions}
                                 </select>
                             </div>
@@ -1331,31 +1333,31 @@
                         
                         <div class="space-y-3 relative z-10">
                             ${Object.keys(recapData).length === 0 ? `
-                                <div class="bg-white/5 rounded-2xl p-4 sm:p-5 text-center border border-white/5">
-                                    <p class="text-xs sm:text-sm text-slate-400 font-medium">Belum ada data bongkar sesuai filter.</p>
+                                <div class="bg-slate-50 rounded-2xl p-4 sm:p-5 text-center border border-slate-200">
+                                    <p class="text-xs sm:text-sm text-slate-500 font-medium">Belum ada data bongkar sesuai filter.</p>
                                 </div>
                             ` : Object.keys(recapData).map(merk => `
-                                <div onclick="Handlers.openBulkyModal('${merk}')" class="bg-white/10 p-3 sm:p-4 rounded-xl sm:rounded-2xl flex justify-between items-center backdrop-blur-md border border-white/5 cursor-pointer hover:bg-white/20 transition-all active:scale-95 group relative pr-8 sm:pr-10">
+                                <div onclick="Handlers.openBulkyModal('${merk}')" class="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl flex justify-between items-center border border-slate-200 cursor-pointer hover:bg-slate-50 transition-all active:scale-95 group relative pr-8 sm:pr-10 shadow-sm">
                                     <div class="flex items-center gap-3 sm:gap-4">
-                                        <div class="bg-white/10 w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-white border border-white/10">
+                                        <div class="bg-blue-50 w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-blue-600 border border-blue-100">
                                             <i data-lucide="truck" stroke-width="2" style="width: 20px; height: 20px;"></i>
                                         </div>
                                         <div>
-                                            <span class="font-black text-base sm:text-lg block leading-none mb-1 sm:mb-1.5">${merk}</span>
-                                            <span class="text-[9px] sm:text-[10px] text-slate-300 font-bold uppercase tracking-widest">${recapData[merk].count} Kendaraan</span>
+                                            <span class="font-black text-base sm:text-lg block leading-none mb-1 sm:mb-1.5 text-slate-800">${merk}</span>
+                                            <span class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest">${recapData[merk].count} Kendaraan</span>
                                         </div>
                                     </div>
                                     <div class="text-right">
-                                        <span class="block font-black text-lg sm:text-xl">${recapData[merk].totalAwal} <span class="text-[10px] sm:text-xs font-semibold opacity-60">kg</span></span>
-                                        <span class="text-[9px] sm:text-[10px] text-rose-300 font-black bg-rose-500/20 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md mt-1 sm:mt-1.5 inline-block uppercase tracking-wider">Susut: ${recapData[merk].totalSusut} kg</span>
+                                        <span class="block font-black text-lg sm:text-xl text-slate-800">${recapData[merk].totalAwal} <span class="text-[10px] sm:text-xs font-semibold text-slate-400">kg</span></span>
+                                        <span class="text-[9px] sm:text-[10px] text-rose-600 font-black bg-rose-50 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md mt-1 sm:mt-1.5 inline-block border border-rose-100 uppercase tracking-wider">Susut: ${recapData[merk].totalSusut} kg</span>
                                     </div>
-                                    <div class="absolute right-3 sm:right-4 text-blue-400/50 group-hover:text-blue-300 transition-colors">
+                                    <div class="absolute right-3 sm:right-4 text-slate-300 group-hover:text-blue-500 transition-colors">
                                         <i data-lucide="chevron-right" style="width: 20px; height: 20px;"></i>
                                     </div>
                                 </div>
                             `).join('')}
                         </div>
-                    `, 'bg-slate-900 text-white border-none relative overflow-visible shadow-xl shadow-slate-900/20', 'p-5 sm:p-6')}
+                    `, 'bg-white border border-slate-200 shadow-sm relative overflow-visible', 'p-5 sm:p-6')}
 
                     ${app.state.user?.role === 'operator' ? Components.Card(`
                         <div class="flex justify-between items-center mb-5 sm:mb-6 border-b border-slate-100 pb-3 sm:pb-4">
@@ -1541,7 +1543,7 @@
                                         </div>
                                         <div class="space-y-3 sm:space-y-4 border-l-2 border-slate-200 ml-2 sm:ml-3 pl-3 sm:pl-4">
                                             ${groupedLogs[date].map(log => Components.Card(`
-                                                <div class="absolute w-2.5 h-2.5 sm:w-3 sm:h-3 bg-white border-2 border-slate-300 rounded-full -left-[19px] sm:-left-[23px] top-4 group-hover:border-indigo-500 transition-colors"></div>
+                                                <div class="absolute w-2.5 h-2.5 sm:w-3 sm:h-3 bg-white border-2 border-slate-300 rounded-full -left-[19px] sm:-left-[23px] top-4 group-hover:border-indigo-50 transition-colors"></div>
                                                 <div class="p-3 sm:p-4 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
                                                     <div class="flex items-center gap-1.5 sm:gap-2">
                                                         ${Components.Badge(`Shift ${log.shift}`, 'warning')}
@@ -1641,7 +1643,7 @@
                 const fData = app.state.stockForm;
                 const db = app.state.db;
                 
-                // Cek Data Opname Double (Mencegah submit tanggal dan shift yang sama)
+                // Cek Data Opname Double
                 const existingLog = db.opnameLogs?.find(log => log.tanggal === fData.tanggal && log.shift === fData.shift);
                 if (existingLog) {
                     app.showGlobalMessage(`Data Opname tanggal ${formatDate(fData.tanggal)} Shift ${fData.shift} sudah pernah disimpan!`, true);
@@ -1704,10 +1706,8 @@
                 
                 const newLogEntry = { ...fData, id: Date.now(), timestamp: new Date().toISOString() };
 
-                // Optimistic UI saving agar tidak lama muter
                 app.postData({ action: 'saveOpname', payload: { stock: newStockData, log: newLogEntry } }).catch(err => console.error(err));
                 
-                // Langsung pulihkan tombol dan tampilkan UI Sukses Modern
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('opacity-70', 'cursor-wait');
                 submitIcon.setAttribute('data-lucide', 'save');
@@ -1774,6 +1774,52 @@
             selectRecapWeek: (val) => { app.state.recapFilters.week = val; app.state.recapFilters.searchOpen = false; app.renderActiveTab(); },
             changeRecapDay: (val) => { app.state.recapFilters.day = val; app.renderActiveTab(); },
 
+            exportOpnameExcel: () => {
+                const logs = app.state.db.opnameLogs || [];
+                const filters = app.state.recapFilters;
+                
+                let filteredLogs = logs.filter(log => {
+                    const logDate = new Date(log.timestamp);
+                    const logWeek = getWeekNumber(logDate).toString();
+                    const logDayName = getDayName(log.tanggal).toLowerCase();
+                    const weekMatches = filters.week === 'all' || logWeek === filters.week.toString();
+                    const dayMatches = filters.day === 'all' || logDayName === filters.day.toLowerCase();
+                    return weekMatches && dayMatches;
+                }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                if (filteredLogs.length === 0) {
+                    app.showGlobalMessage("Tidak ada data untuk di-export.", true);
+                    return;
+                }
+
+                let csv = "Tanggal,Shift,Silo 1 Merk,S1 Awal,S1 Masuk Zak,S1 Masuk Bulky,S1 Pemakaian,S1 Akhir,Silo 2 Merk,S2 Awal,S2 Masuk Zak,S2 Masuk Bulky,S2 Pemakaian,S2 Akhir,Silo 3 Merk,S3 Awal,S3 Masuk Zak,S3 Masuk Bulky,S3 Pemakaian,S3 Akhir,Silo 4 Merk,S4 Awal,S4 Masuk Zak,S4 Masuk Bulky,S4 Pemakaian,S4 Akhir,Tapioka Merk,Tap Awal,Tap Masuk,Tap Pemakaian,Tap Akhir,Gula Merk,Gula Akhir,Catatan\n";
+
+                filteredLogs.forEach(log => {
+                    const calcP = (awal, mZak, mBulky, m, akhir) => calcPakai(awal, (Number(mZak)||0)+(Number(mBulky)||0)+(Number(m)||0), akhir);
+                    const row = [
+                        log.tanggal,
+                        log.shift,
+                        log.silo1?.merk || '', log.silo1?.awal || 0, log.silo1?.masukZak || 0, log.silo1?.masukBulky || 0, calcP(log.silo1?.awal, log.silo1?.masukZak, log.silo1?.masukBulky, log.silo1?.masuk, log.silo1?.akhir), log.silo1?.akhir || 0,
+                        log.silo2?.merk || '', log.silo2?.awal || 0, log.silo2?.masukZak || 0, log.silo2?.masukBulky || 0, calcP(log.silo2?.awal, log.silo2?.masukZak, log.silo2?.masukBulky, log.silo2?.masuk, log.silo2?.akhir), log.silo2?.akhir || 0,
+                        log.silo3?.merk || '', log.silo3?.awal || 0, log.silo3?.masukZak || 0, log.silo3?.masukBulky || 0, calcP(log.silo3?.awal, log.silo3?.masukZak, log.silo3?.masukBulky, log.silo3?.masuk, log.silo3?.akhir), log.silo3?.akhir || 0,
+                        log.silo4?.merk || '', log.silo4?.awal || 0, log.silo4?.masukZak || 0, log.silo4?.masukBulky || 0, calcP(log.silo4?.awal, log.silo4?.masukZak, log.silo4?.masukBulky, log.silo4?.masuk, log.silo4?.akhir), log.silo4?.akhir || 0,
+                        log.tapioka?.merk || '', log.tapioka?.awal || 0, log.tapioka?.masuk || 0, calcP(log.tapioka?.awal, 0, 0, log.tapioka?.masuk, log.tapioka?.akhir), log.tapioka?.akhir || 0,
+                        log.gula?.merk || '', log.gula?.akhir || 0,
+                        `"${(log.catatanOpname || '').replace(/"/g, '""')}"`
+                    ];
+                    csv += row.join(",") + "\n";
+                });
+
+                const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", `Rekap_Opname_MHS_${new Date().getTime()}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            },
+
             // Opname Bulky Details Handlers
             showOpnameBulky: (tanggal, shift) => {
                 app.state.selectedOpnameForBulky = { tanggal, shift };
@@ -1786,12 +1832,63 @@
 
             // Bulky Handlers
             openBulkySearch: () => { app.state.bulkyFilters.searchOpen = true; app.state.bulkyFilters.searchTxt = ''; app.renderActiveTab(); },
-            typeBulkySearch: (val) => { app.state.bulkyFilters.searchTxt = val; app.renderActiveTab(); setTimeout(()=>document.querySelector('#main-content input[type="text"]').focus(),0); },
+            typeBulkySearch: (val) => { app.state.bulkyFilters.searchTxt = val; app.renderActiveTab(); setTimeout(()=>document.getElementById('week-search-bulky').focus(),0); },
             selectBulkyWeek: (val) => { app.state.bulkyFilters.week = val; app.state.bulkyFilters.searchOpen = false; app.renderActiveTab(); },
             changeBulkyDay: (val) => { app.state.bulkyFilters.day = val; app.renderActiveTab(); },
             openBulkyModal: (merk) => { app.state.selectedMerkRecap = merk; app.renderActiveTab(); },
             closeBulkyModal: () => { app.state.selectedMerkRecap = null; app.renderActiveTab(); },
             
+            exportBulkyExcel: () => {
+                const logs = app.state.db.bulkyLogs || [];
+                const filters = app.state.bulkyFilters;
+                
+                let filteredLogs = logs.filter(log => {
+                    const logDate = new Date(log.timestamp);
+                    const logWeek = getWeekNumber(logDate).toString();
+                    const logDay = getDayName(log.tanggal).toLowerCase();
+                    const weekMatches = filters.week === 'all' || logWeek === filters.week.toString();
+                    const dayMatches = filters.day === 'all' || logDay === filters.day.toLowerCase();
+                    return weekMatches && dayMatches;
+                }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                if (filteredLogs.length === 0) {
+                    app.showGlobalMessage("Tidak ada data untuk di-export.", true);
+                    return;
+                }
+
+                let csv = "Tgl Kedatangan,Tgl Bongkar,Shift,No Bulky,Merk,Tujuan Silo,Jam Masuk,Jam Release,Jam Bongkar,Jam Selesai,Qty Awal,Qty Akhir,Susut,Catatan\n";
+
+                filteredLogs.forEach(log => {
+                    const susut = (Number(log.qtyAwal) || 0) - (Number(log.qtyAkhir) || 0);
+                    const row = [
+                        log.tanggalKedatangan || '',
+                        log.tanggal || '',
+                        log.shift || '',
+                        `"${log.noBulky || ''}"`,
+                        `"${log.merk || ''}"`,
+                        log.tujuanSilo || '',
+                        formatTime(log.jamMasuk) || '',
+                        formatTime(log.jamRelease) || '',
+                        formatTime(log.jamBongkar) || '',
+                        formatTime(log.jamSelesai) || '',
+                        log.qtyAwal || 0,
+                        log.qtyAkhir || 0,
+                        susut,
+                        `"${(log.catatan || '').replace(/"/g, '""')}"`
+                    ];
+                    csv += row.join(",") + "\n";
+                });
+
+                const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", `Rekap_Bulky_MHS_${new Date().getTime()}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            },
+
             shareBulkyRecap: () => {
                 const recapData = window.currentBulkyRecapData || {};
                 const filterWeek = window.currentBulkyFilters?.week || 'all';
@@ -1827,13 +1924,10 @@
 
                 const newLog = { ...fData, id: Date.now(), timestamp: new Date(fData.tanggal).getTime() };
                 
-                // Optimistic post
                 app.postData({ action: 'saveBulky', payload: newLog }).catch(err => console.error(err));
                 
-                // Reset form
                 app.state.bulkyForm = { ...fData, noBulky: '', merk: '', tujuanSilo: '', jamMasuk: '', jamRelease: '', jamBongkar: '', jamSelesai: '', qtyAwal: '', qtyAkhir: '', catatan: '' };
                 
-                // Restore button immediately
                 btn.disabled = false;
                 btn.classList.remove('opacity-70', 'cursor-wait');
                 document.getElementById('bf-submit-icon').setAttribute('data-lucide', 'save');
