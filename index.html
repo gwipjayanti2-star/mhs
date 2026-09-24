@@ -25,9 +25,18 @@
             from { opacity: 0; transform: translateY(15px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        @keyframes scaleIn {
+            0% { opacity: 0; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
         
         .animate-fade-in {
             animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .animate-scale-in {
+            animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
         
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 24px); }
@@ -59,7 +68,7 @@
 
     <script>
         // === GANTI URL INI DENGAN URL WEB APP GOOGLE SCRIPT ANDA ===
-        const API_URL = "https://script.google.com/macros/s/AKfycbxt9r8XxGB3tVp8YiSTt3LzV1vDQM1M9dCxy3XjNPeV9k3fmmM9HP7oRwbDPIz8lh51nQ/exec";
+        const API_URL = "https://script.google.com/macros/s/AKfycbxnWOh6-FIn5v_kNalNsIi4QgZoRJ_6htXU_N0AWln2-nUWPTuEuRRwr9mjMCTB6TODdQ/exec";
 
         // Constants
         const DAYS_OF_WEEK = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
@@ -121,7 +130,7 @@
         // Global App Object for State and Methods
         const app = {
             state: {
-                user: null, // { username, role }
+                user: null, 
                 activeTab: 'dashboard',
                 isAuthLoading: false,
                 loginError: '',
@@ -137,10 +146,11 @@
                 // Form States
                 stockForm: null,
                 recapFilters: { week: 'all', day: 'all', searchOpen: false, searchTxt: '' },
+                selectedOpnameForBulky: null, // For viewing bulky details from opname recap
                 bulkyFilters: { week: getWeekNumber(new Date()).toString(), day: 'all', searchOpen: false, searchTxt: '' },
                 bulkyForm: null,
                 maintenanceForm: null,
-                selectedMerkRecap: null // For Bulky Modal
+                selectedMerkRecap: null 
             },
 
             // --- Core Methods ---
@@ -244,6 +254,35 @@
                 }
             },
 
+            showSuccessModal: function(title, message) {
+                let existing = document.getElementById('success-modal');
+                if (existing) existing.remove();
+
+                const div = document.createElement('div');
+                div.id = 'success-modal';
+                div.className = 'fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm';
+                div.innerHTML = `
+                    <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center animate-scale-in border border-slate-100">
+                        <div class="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mb-5 shadow-inner border border-emerald-200">
+                            <i data-lucide="check-circle" stroke-width="2.5" style="width: 40px; height: 40px;"></i>
+                        </div>
+                        <h3 class="text-2xl font-black text-slate-800 mb-2">${title}</h3>
+                        <p class="text-sm font-semibold text-slate-500 mb-6">${message}</p>
+                        <button onclick="document.getElementById('success-modal').remove()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-black py-4 rounded-2xl transition-colors shadow-lg shadow-emerald-500/30 active:scale-95 text-sm uppercase tracking-widest">
+                            Selesai
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(div);
+                lucide.createIcons({root: div});
+                
+                // Auto close
+                setTimeout(() => {
+                    const el = document.getElementById('success-modal');
+                    if(el) el.remove();
+                }, 3500);
+            },
+
             // --- API & Actions ---
             login: async function(e) {
                 e.preventDefault();
@@ -289,7 +328,7 @@
                     const res = await fetch(`${API_URL}?action=getData`);
                     const data = await res.json();
                     this.state.db = data;
-                    if(this.state.activeTab === 'dashboard' || this.state.activeTab === 'recap' || this.state.activeTab === 'maintenance') {
+                    if(this.state.activeTab === 'dashboard' || this.state.activeTab === 'recap' || this.state.activeTab === 'maintenance' || this.state.activeTab === 'bulky') {
                          this.renderActiveTab();
                     }
                 } catch (err) {
@@ -335,10 +374,37 @@
                         if(this.state.activeTab === 'maintenance') this.renderActiveTab();
                     }
 
+                    // Meratakan (flatten) data agar tidak menjadi format JSON
+                    const params = new URLSearchParams();
+                    params.append('action', payloadData.action);
+                    
+                    const flatten = (obj, prefix = '') => {
+                        for (const key in obj) {
+                            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                                const val = obj[key];
+                                const newKey = prefix ? `${prefix}_${key}` : key;
+                                
+                                if (val !== null && typeof val === 'object') {
+                                    if (Array.isArray(val) && (val.length === 0 || typeof val[0] !== 'object')) {
+                                        const filteredArray = val.filter(v => v !== null && String(v).trim() !== '');
+                                        params.append(newKey, filteredArray.join(' | '));
+                                    } else {
+                                        flatten(val, newKey);
+                                    }
+                                } else {
+                                    params.append(newKey, val !== undefined && val !== null ? val : '');
+                                }
+                            }
+                        }
+                    };
+                    
+                    if (payloadData.payload) {
+                        flatten(payloadData.payload);
+                    }
+
                     await fetch(API_URL, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(payloadData)
+                        body: params
                     });
                 } catch (err) {
                     console.error("Error saving data", err);
@@ -675,7 +741,6 @@
                 const db = app.state.db;
                 const { shift: autoShift, date: autoDate } = getCurrentShiftInfo();
                 
-                // Initialize form state if not exists, updated to support Zak & Bulky inputs separately
                 if (!app.state.stockForm) {
                     app.state.stockForm = {
                         tanggal: autoDate, shift: autoShift,
@@ -683,7 +748,7 @@
                         silo2: { merk: db.lastStock?.silo2?.merk || '', awal: db.lastStock?.silo2?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '' },
                         silo3: { merk: db.lastStock?.silo3?.merk || '', awal: db.lastStock?.silo3?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '' },
                         silo4: { merk: db.lastStock?.silo4?.merk || '', customMerk: '', awal: db.lastStock?.silo4?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '' },
-                        tapioka: { merk: db.lastStock?.tapioka?.merk || '', awal: db.lastStock?.tapioka?.akhir || 0, masuk: '', akhir: '' }, // Tapioka uses regular masuk (zak only usually)
+                        tapioka: { merk: db.lastStock?.tapioka?.merk || '', awal: db.lastStock?.tapioka?.akhir || 0, masuk: '', akhir: '' }, 
                         gula: { merk: db.lastStock?.gula?.merk || '', akhir: db.lastStock?.gula?.akhir || 0 },
                         catatanOpname: '', serahTerima: ['', '', '', '', '']
                     };
@@ -895,11 +960,10 @@
                     return weekMatches && dayMatches;
                 }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-                // Helper to render Masuk column supporting old and new data structures
                 const renderMasukCell = (silo) => {
                     const z = Number(silo?.masukZak) || 0;
                     const b = Number(silo?.masukBulky) || 0;
-                    const oldM = Number(silo?.masuk) || 0; // For backward compatibility with old data logs
+                    const oldM = Number(silo?.masuk) || 0; 
                     
                     if (z > 0 || b > 0) {
                         let html = `<div class="font-medium text-slate-700">${z + b}</div>`;
@@ -917,7 +981,60 @@
                 const getTotalMasuk = (silo) => (Number(silo?.masukZak) || 0) + (Number(silo?.masukBulky) || 0) + (Number(silo?.masuk) || 0);
                 const calcP = (awal, masuk, akhir) => calcPakai(awal, masuk, akhir);
 
-                // Custom Dropdown Week Search
+                let opnameBulkyModalHtml = '';
+                if (app.state.selectedOpnameForBulky) {
+                    const { tanggal, shift } = app.state.selectedOpnameForBulky;
+                    const matchingBulky = app.state.db.bulkyLogs?.filter(b => b.tanggal === tanggal && b.shift === shift) || [];
+                    
+                    opnameBulkyModalHtml = `
+                    <div class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 animate-fade-in" onclick="Handlers.closeOpnameBulkyModal()">
+                        <div class="bg-[#F4F7F9] w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
+                            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-white sticky top-0 z-10">
+                                <div>
+                                    <h3 class="font-black text-slate-800 text-lg flex items-center gap-2">
+                                        <i data-lucide="truck" class="text-blue-600" style="width: 18px; height: 18px;"></i> Rincian Bulky
+                                    </h3>
+                                    <p class="text-[10px] font-bold text-slate-500 mt-0.5">${formatDate(tanggal)} • Shift ${shift}</p>
+                                </div>
+                                <button onclick="Handlers.closeOpnameBulkyModal()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95">
+                                    <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+                                </button>
+                            </div>
+                            <div class="p-4 overflow-y-auto space-y-3">
+                                ${matchingBulky.length === 0 ? `
+                                    <div class="text-center py-8">
+                                        <div class="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><i data-lucide="inbox" class="text-slate-400"></i></div>
+                                        <p class="text-sm font-semibold text-slate-500">Tidak ada data bulky dibongkar pada shift ini.</p>
+                                    </div>
+                                ` : matchingBulky.map(log => `
+                                    <div class="bg-white border border-slate-200 shadow-sm rounded-2xl p-4">
+                                        <div class="flex justify-between items-start mb-3">
+                                            <div>
+                                                <div class="font-black text-slate-800 text-base">${log.noBulky}</div>
+                                                <div class="text-[10px] font-bold text-slate-500">${log.merk}</div>
+                                                ${log.tanggalKedatangan ? `<div class="text-[10px] font-bold text-blue-500 mt-0.5">Datang: ${formatDate(log.tanggalKedatangan)}</div>` : ''}
+                                            </div>
+                                            ${Components.Badge(log.tujuanSilo || 'Tidak ada data', 'primary')}
+                                        </div>
+                                        <div class="grid grid-cols-4 gap-2 text-center text-xs bg-slate-50 rounded-xl p-2 mb-3 border border-slate-100">
+                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Masuk</div><div class="font-semibold text-slate-700">${log.jamMasuk || '-'}</div></div>
+                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Release</div><div class="font-semibold text-slate-700">${log.jamRelease || '-'}</div></div>
+                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Bongkar</div><div class="font-semibold text-slate-700">${log.jamBongkar || '-'}</div></div>
+                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Selesai</div><div class="font-semibold text-slate-700">${log.jamSelesai || '-'}</div></div>
+                                        </div>
+                                        <div class="grid grid-cols-3 gap-2 text-center border-t border-slate-100 pt-3">
+                                            <div><div class="text-[9px] text-slate-400 font-bold uppercase">Awal</div><div class="font-black text-slate-700">${log.qtyAwal}</div></div>
+                                            <div class="border-l border-r border-slate-100"><div class="text-[9px] text-slate-400 font-bold uppercase">Akhir</div><div class="font-black text-slate-700">${log.qtyAkhir}</div></div>
+                                            <div><div class="text-[9px] text-rose-400 font-bold uppercase">Susut</div><div class="font-black text-rose-600">${Number(log.qtyAwal) - Number(log.qtyAkhir)}</div></div>
+                                        </div>
+                                        ${log.catatan ? `<div class="mt-3 pt-3 border-t border-slate-100"><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Catatan</p><p class="text-xs font-semibold text-slate-700 italic">"${log.catatan}"</p></div>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>`;
+                }
+
                 let weeks = [{ id: 'all', label: 'Semua Minggu' }];
                 for (let i = 1; i <= 52; i++) weeks.push({ id: i.toString(), label: `Minggu Ke-${i}` });
                 let displayValue = filters.week === 'all' ? 'Semua Minggu' : `Minggu Ke-${filters.week}`;
@@ -953,7 +1070,12 @@
                                     <div class="font-black text-slate-800 text-sm">${hariStr}, ${tglStr}</div>
                                     <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Disimpan: ${new Date(log.timestamp).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})}</div>
                                 </div>
-                                ${Components.Badge(`Shift ${log.shift}`, 'warning')}
+                                <div class="flex items-center gap-2">
+                                    <button type="button" onclick="Handlers.showOpnameBulky('${log.tanggal}', '${log.shift}')" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-2.5 py-1.5 rounded-lg border border-blue-100 text-[10px] font-black flex items-center gap-1.5 active:scale-95 transition-all shadow-sm">
+                                        <i data-lucide="truck" style="width: 12px; height: 12px;"></i> Bulky
+                                    </button>
+                                    ${Components.Badge(`Shift ${log.shift}`, 'warning')}
+                                </div>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left text-xs sm:text-sm border-collapse">
@@ -1022,6 +1144,7 @@
 
                 return `
                 <div class="max-w-2xl mx-auto space-y-4 animate-fade-in pb-8">
+                    ${opnameBulkyModalHtml}
                     ${Components.Card(`
                         <div class="absolute inset-0 overflow-hidden rounded-[1.5rem] pointer-events-none z-0">
                             <div class="absolute -top-10 -right-10 w-32 h-32 bg-blue-500 rounded-full mix-blend-screen filter blur-3xl opacity-30"></div>
@@ -1074,8 +1197,8 @@
                 const { shift: autoShift, date: autoDate } = getCurrentShiftInfo();
                 if (!app.state.bulkyForm) {
                     app.state.bulkyForm = {
-                        tanggal: autoDate, shift: autoShift, noBulky: '', merk: '', tujuanSilo: '',
-                        jamMasuk: '', jamRelease: '', jamBongkar: '', jamSelesai: '', qtyAwal: '', qtyAkhir: ''
+                        tanggalKedatangan: autoDate, tanggal: autoDate, shift: autoShift, noBulky: '', merk: '', tujuanSilo: '',
+                        jamMasuk: '', jamRelease: '', jamBongkar: '', jamSelesai: '', qtyAwal: '', qtyAkhir: '', catatan: ''
                     };
                 }
                 const fData = app.state.bulkyForm;
@@ -1087,7 +1210,7 @@
                 logs.forEach(log => {
                     const logDate = new Date(log.timestamp);
                     const logWeek = getWeekNumber(logDate).toString();
-                    const logDay = getDayName(log.tanggal).toLowerCase();
+                    const logDay = getDayName(log.tanggal).toLowerCase(); // Menggunakan tanggal bongkar
                     const weekMatches = filters.week === 'all' || logWeek === filters.week.toString();
                     const dayMatches = filters.day === 'all' || logDay === filters.day.toLowerCase();
 
@@ -1102,11 +1225,9 @@
                     }
                 });
                 
-                // Store recap data globally for the share handler
                 window.currentBulkyRecapData = recapData;
                 window.currentBulkyFilters = filters;
 
-                // Modal HTML
                 let modalHtml = '';
                 if (app.state.selectedMerkRecap && recapData[app.state.selectedMerkRecap]) {
                     const selMerk = app.state.selectedMerkRecap;
@@ -1127,7 +1248,8 @@
                                         <div class="flex justify-between items-start mb-3">
                                             <div>
                                                 <div class="font-black text-slate-800 text-base">${log.noBulky}</div>
-                                                <div class="text-[10px] font-bold text-slate-500">${formatDate(log.tanggal)} • Shift ${log.shift}</div>
+                                                <div class="text-[10px] font-bold text-slate-500">Bongkar: ${formatDate(log.tanggal)} • Shift ${log.shift}</div>
+                                                ${log.tanggalKedatangan ? `<div class="text-[10px] font-bold text-blue-500 mt-0.5">Datang: ${formatDate(log.tanggalKedatangan)}</div>` : ''}
                                             </div>
                                             ${Components.Badge(log.tujuanSilo || 'Tidak ada data', 'primary')}
                                         </div>
@@ -1142,6 +1264,7 @@
                                             <div class="border-l border-r border-slate-100"><div class="text-[9px] text-slate-400 font-bold uppercase">Akhir</div><div class="font-black text-slate-700">${log.qtyAkhir} <span class="text-[9px] font-medium opacity-50">kg</span></div></div>
                                             <div><div class="text-[9px] text-rose-400 font-bold uppercase">Susut</div><div class="font-black text-rose-600">${Number(log.qtyAwal) - Number(log.qtyAkhir)} <span class="text-[9px] font-medium opacity-50">kg</span></div></div>
                                         </div>
+                                        ${log.catatan ? `<div class="mt-3 pt-3 border-t border-slate-100"><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Catatan</p><p class="text-xs font-semibold text-slate-700 italic">"${log.catatan}"</p></div>` : ''}
                                     </div>
                                 `).join('')}
                             </div>
@@ -1149,7 +1272,6 @@
                     </div>`;
                 }
 
-                // Dropdown setup
                 let weeks = [{ id: 'all', label: 'Semua Minggu' }];
                 for (let i = 1; i <= 52; i++) weeks.push({ id: i.toString(), label: `Minggu Ke-${i}` });
                 let displayValue = filters.week === 'all' ? 'Semua Minggu' : `Minggu Ke-${filters.week}`;
@@ -1245,24 +1367,38 @@
                         <form onsubmit="Handlers.saveBulkyForm(event)">
                             <div class="grid grid-cols-2 gap-3 mb-2">
                                 <div class="relative group w-full mb-4">
-                                    <input type="date" value="${fData.tanggal}" onchange="app.state.bulkyForm.tanggal = this.value" class="block w-full px-4 py-3.5 text-sm sm:text-base font-bold text-slate-900 bg-white border border-slate-200 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm custom-date-input" required/>
-                                    <label class="absolute -top-2.5 left-3 px-1 bg-white text-[9px] sm:text-[10px] font-black text-blue-600 uppercase tracking-widest">Tanggal</label>
+                                    <input type="date" value="${fData.tanggalKedatangan}" onchange="app.state.bulkyForm.tanggalKedatangan = this.value" class="block w-full px-4 py-3.5 text-sm sm:text-base font-bold text-slate-900 bg-white border border-slate-200 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm custom-date-input" required/>
+                                    <label class="absolute -top-2.5 left-3 px-1 bg-white text-[9px] sm:text-[10px] font-black text-blue-600 uppercase tracking-widest">Tgl Datang *</label>
                                 </div>
-                                ${Components.ModernSelect({
-                                    id: 'bf-shift', label: 'Shift', value: fData.shift, options: ['1', '2', '3'],
-                                    onChange: "app.state.bulkyForm.shift = this.value"
-                                })}
+                                <div class="relative group w-full mb-4">
+                                    <input type="date" value="${fData.tanggal}" onchange="app.state.bulkyForm.tanggal = this.value" class="block w-full px-4 py-3.5 text-sm sm:text-base font-bold text-slate-900 bg-white border border-slate-200 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm custom-date-input" required/>
+                                    <label class="absolute -top-2.5 left-3 px-1 bg-white text-[9px] sm:text-[10px] font-black text-blue-600 uppercase tracking-widest">Tgl Bongkar *</label>
+                                </div>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                ${Components.ModernSelect({
+                                    id: 'bf-shift', label: 'Shift Bongkar *', value: fData.shift, options: ['1', '2', '3'],
+                                    onChange: "app.state.bulkyForm.shift = this.value", required: true
+                                })}
                                 ${Components.FloatingInput({ id: 'bf-noBulky', label: "No Kendaraan / No Bulky", value: fData.noBulky, required: true, onInput: "app.state.bulkyForm.noBulky = this.value" })}
-                                ${Components.FloatingInput({ id: 'bf-merk', label: "Merk Terigu", value: fData.merk, required: true, onInput: "app.state.bulkyForm.merk = this.value" })}
                             </div>
-                            <div class="mb-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                ${Components.FloatingInput({ id: 'bf-merk', label: "Merk Terigu", value: fData.merk, required: true, onInput: "app.state.bulkyForm.merk = this.value" })}
                                 ${Components.ModernSelect({
                                     id: 'bf-tujuanSilo', label: "Tujuan Silo *", value: fData.tujuanSilo, required: true, options: ['Silo 1', 'Silo 2', 'Silo 3', 'Silo 4'],
                                     onChange: "app.state.bulkyForm.tujuanSilo = this.value"
                                 })}
                             </div>
+                            
+                            <div class="mb-4">
+                                <div class="relative">
+                                    <div class="absolute top-3 left-3 pointer-events-none">
+                                        <i data-lucide="file-text" class="text-slate-400" style="width: 16px; height: 16px;"></i>
+                                    </div>
+                                    <textarea placeholder="Catatan Tambahan (Opsional)..." oninput="app.state.bulkyForm.catatan = this.value" rows="2" class="w-full bg-white text-slate-800 placeholder-slate-400 text-xs sm:text-sm font-semibold pl-9 pr-3 py-2.5 sm:py-3 rounded-2xl outline-none border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm resize-none">${fData.catatan || ''}</textarea>
+                                </div>
+                            </div>
+
                             <div class="bg-slate-50 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 mt-2 mb-4 sm:mb-5 shadow-inner">
                                 <p class="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 sm:mb-4 flex items-center">
                                     <i data-lucide="clock" class="mr-1.5" style="width: 12px; height: 12px;"></i> Timeline Proses
@@ -1295,7 +1431,7 @@
                                 </div>
                                 <div class="text-right">
                                     <span class="block font-black text-blue-600 text-sm sm:text-base">${log.qtyAwal} kg</span>
-                                    <span class="text-[9px] sm:text-[10px] font-bold text-slate-400">${formatDate(log.tanggal)}</span>
+                                    <span class="text-[9px] sm:text-[10px] font-bold text-slate-400">Bongkar: ${formatDate(log.tanggal)}</span>
                                 </div>
                             `, 'flex justify-between items-center', 'p-3 sm:p-4')).join('')}
                         </div>
@@ -1491,7 +1627,6 @@
                 if (['awal', 'masuk', 'masukZak', 'masukBulky', 'akhir'].includes(field)) {
                     const pemakaianLabel = document.getElementById(`pemakaian-${siloKey}`);
                     if (pemakaianLabel) {
-                        // Support both old Tapioka masuk and new Silo masukZak+masukBulky
                         let totalMasuk = 0;
                         if(siloKey === 'tapioka') totalMasuk = fData[siloKey].masuk;
                         else totalMasuk = (Number(fData[siloKey].masukZak) || 0) + (Number(fData[siloKey].masukBulky) || 0);
@@ -1505,6 +1640,13 @@
                 e.preventDefault();
                 const fData = app.state.stockForm;
                 const db = app.state.db;
+                
+                // Cek Data Opname Double (Mencegah submit tanggal dan shift yang sama)
+                const existingLog = db.opnameLogs?.find(log => log.tanggal === fData.tanggal && log.shift === fData.shift);
+                if (existingLog) {
+                    app.showGlobalMessage(`Data Opname tanggal ${formatDate(fData.tanggal)} Shift ${fData.shift} sudah pernah disimpan!`, true);
+                    return;
+                }
                 
                 const submitBtn = document.getElementById('sf-submit-btn');
                 const submitIcon = document.getElementById('sf-submit-icon');
@@ -1522,7 +1664,6 @@
                     const prevSilo = db.lastStock[siloKey] || { batches: [] };
                     const awal = Number(formInput.awal) || 0;
                     
-                    // Determine total incoming based on new variables
                     let totalMasuk = 0;
                     if(siloKey === 'tapioka') totalMasuk = Number(formInput.masuk) || 0;
                     else totalMasuk = (Number(formInput.masukZak) || 0) + (Number(formInput.masukBulky) || 0);
@@ -1563,8 +1704,10 @@
                 
                 const newLogEntry = { ...fData, id: Date.now(), timestamp: new Date().toISOString() };
 
-                await app.postData({ action: 'saveOpname', payload: { stock: newStockData, log: newLogEntry } });
+                // Optimistic UI saving agar tidak lama muter
+                app.postData({ action: 'saveOpname', payload: { stock: newStockData, log: newLogEntry } }).catch(err => console.error(err));
                 
+                // Langsung pulihkan tombol dan tampilkan UI Sukses Modern
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('opacity-70', 'cursor-wait');
                 submitIcon.setAttribute('data-lucide', 'save');
@@ -1572,7 +1715,7 @@
                 submitText.innerText = 'Simpan Opname';
                 lucide.createIcons({root: submitBtn});
                 
-                app.showGlobalMessage('Opname berhasil disimpan', false);
+                app.showSuccessModal('Berhasil!', 'Data opname shift ini telah disimpan.');
             },
 
             shareOpnameWA: () => {
@@ -1582,7 +1725,6 @@
                 
                 const getMerkStr = (silo) => silo.merk === 'LAINNYA' ? (silo.customMerk || 'Lainnya') : silo.merk;
                 
-                // Helper format string untuk WA dengan dukungan Masuk Zak & Bulky
                 const getSiloStr = (name, type, data) => {
                     const totalMasuk = (Number(data.masukZak) || 0) + (Number(data.masukBulky) || 0);
                     const pakai = calcPakai(data.awal, totalMasuk, data.akhir);
@@ -1632,6 +1774,16 @@
             selectRecapWeek: (val) => { app.state.recapFilters.week = val; app.state.recapFilters.searchOpen = false; app.renderActiveTab(); },
             changeRecapDay: (val) => { app.state.recapFilters.day = val; app.renderActiveTab(); },
 
+            // Opname Bulky Details Handlers
+            showOpnameBulky: (tanggal, shift) => {
+                app.state.selectedOpnameForBulky = { tanggal, shift };
+                app.renderActiveTab();
+            },
+            closeOpnameBulkyModal: () => {
+                app.state.selectedOpnameForBulky = null;
+                app.renderActiveTab();
+            },
+
             // Bulky Handlers
             openBulkySearch: () => { app.state.bulkyFilters.searchOpen = true; app.state.bulkyFilters.searchTxt = ''; app.renderActiveTab(); },
             typeBulkySearch: (val) => { app.state.bulkyFilters.searchTxt = val; app.renderActiveTab(); setTimeout(()=>document.querySelector('#main-content input[type="text"]').focus(),0); },
@@ -1674,11 +1826,22 @@
                 lucide.createIcons({root: btn});
 
                 const newLog = { ...fData, id: Date.now(), timestamp: new Date(fData.tanggal).getTime() };
-                await app.postData({ action: 'saveBulky', payload: newLog });
+                
+                // Optimistic post
+                app.postData({ action: 'saveBulky', payload: newLog }).catch(err => console.error(err));
                 
                 // Reset form
-                app.state.bulkyForm = { ...fData, noBulky: '', merk: '', tujuanSilo: '', jamMasuk: '', jamRelease: '', jamBongkar: '', jamSelesai: '', qtyAwal: '', qtyAkhir: '' };
-                app.showGlobalMessage('Data bulky disimpan', false);
+                app.state.bulkyForm = { ...fData, noBulky: '', merk: '', tujuanSilo: '', jamMasuk: '', jamRelease: '', jamBongkar: '', jamSelesai: '', qtyAwal: '', qtyAkhir: '', catatan: '' };
+                
+                // Restore button immediately
+                btn.disabled = false;
+                btn.classList.remove('opacity-70', 'cursor-wait');
+                document.getElementById('bf-submit-icon').setAttribute('data-lucide', 'save');
+                document.getElementById('bf-submit-icon').classList.remove('animate-spin');
+                document.getElementById('bf-submit-text').innerText = 'Simpan Log';
+                lucide.createIcons({root: btn});
+                
+                app.showSuccessModal('Berhasil!', 'Data bongkar bulky telah disimpan.');
             },
 
             // Maintenance Handlers
@@ -1695,10 +1858,19 @@
                 lucide.createIcons({root: btn});
 
                 const newLog = { ...fData, id: Date.now(), timestamp: new Date().toISOString() };
-                await app.postData({ action: 'saveMaintenance', payload: newLog });
+                
+                app.postData({ action: 'saveMaintenance', payload: newLog }).catch(err => console.error(err));
                 
                 app.state.maintenanceForm = { ...fData, part: '', kendala: '', perbaikan: '' };
-                app.showGlobalMessage('Laporan kendala disimpan', false);
+                
+                btn.disabled = false;
+                btn.classList.remove('opacity-70', 'cursor-wait');
+                document.getElementById('mf-submit-icon').setAttribute('data-lucide', 'save');
+                document.getElementById('mf-submit-icon').classList.remove('animate-spin');
+                document.getElementById('mf-submit-text').innerText = 'Simpan Log';
+                lucide.createIcons({root: btn});
+
+                app.showSuccessModal('Berhasil!', 'Laporan kendala mesin telah disimpan.');
             },
 
             shareMaintenance: (log) => {
