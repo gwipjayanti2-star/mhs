@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MHS Pro - Smart Operations</title>
     
+    <!-- PWA Meta Tags (Ini yang sebelumnya kurang) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0B1B3D">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MHS Pro">
+    
+    <!-- Apple Touch Icon (Sama dengan logo login, format base64 SVG) -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20512%20512%27%20width%3D%27512%27%20height%3D%27512%27%3E%3Crect%20width%3D%27512%27%20height%3D%27512%27%20rx%3D%27100%27%20fill%3D%27%233b82f6%27%2F%3E%3Csvg%20x%3D%27128%27%20y%3D%27128%27%20width%3D%27256%27%20height%3D%27256%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%23ffffff%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20width%3D%2716%27%20height%3D%2720%27%20x%3D%274%27%20y%3D%272%27%20rx%3D%272%27%20ry%3D%272%27%2F%3E%3Cpath%20d%3D%27M9%2022v-4h6v4%27%2F%3E%3Cpath%20d%3D%27M8%206h.01%27%2F%3E%3Cpath%20d%3D%27M16%206h.01%27%2F%3E%3Cpath%20d%3D%27M12%206h.01%27%2F%3E%3Cpath%20d%3D%27M12%2010h.01%27%2F%3E%3Cpath%20d%3D%27M12%2014h.01%27%2F%3E%3Cpath%20d%3D%27M16%2010h.01%27%2F%3E%3Cpath%20d%3D%27M16%2014h.01%27%2F%3E%3Cpath%20d%3D%27M8%2010h.01%27%2F%3E%3Cpath%20d%3D%27M8%2014h.01%27%2F%3E%3C%2Fsvg%3E%3C%2Fsvg%3E">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -67,6 +77,19 @@
     <div id="root"></div>
 
     <script>
+        // Pendaftaran Service Worker untuk PWA (Ini yang sebelumnya kurang)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('PWA ServiceWorker terdaftar dengan sukses: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('Gagal mendaftar PWA ServiceWorker (pastikan file sw.js dan manifest.json sudah dibuat di root folder): ', err);
+                    });
+            });
+        }
+
         // === GANTI URL INI DENGAN URL WEB APP GOOGLE SCRIPT ANDA ===
         const API_URL = "https://script.google.com/macros/s/AKfycbxnWOh6-FIn5v_kNalNsIi4QgZoRJ_6htXU_N0AWln2-nUWPTuEuRRwr9mjMCTB6TODdQ/exec";
 
