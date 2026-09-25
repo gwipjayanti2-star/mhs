@@ -1,8 +1,9 @@
-const CACHE_NAME = 'mhs-pro-cache-v2';
+const CACHE_NAME = 'mhs-pro-cache-v3'; // Versi cache dinaikkan untuk memaksa update
 const urlsToCache = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './icon.svg' // PENTING: Cache file icon agar aplikasi lolos syarat offline PWA
 ];
 
 self.addEventListener('install', event => {
