@@ -7,13 +7,13 @@
 "src": "https://www.image2url.com/r2/default/files/1790301105424-7b6b60f2-4ebe-41f8-a0d1-384221bc41ad.png",
 "type": "image/png",
 "sizes": "192x192",
-"purpose": "any maskable"
+"purpose": "any"
 },
 {
 "src": "https://www.image2url.com/r2/default/files/1790301105424-7b6b60f2-4ebe-41f8-a0d1-384221bc41ad.png",
 "type": "image/png",
 "sizes": "512x512",
-"purpose": "any maskable"
+"purpose": "maskable"
 }
 ],
 "start_url": "./index.html",
