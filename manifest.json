@@ -1,23 +1,23 @@
 {
-"short_name": "MHS Pro",
-"name": "MHS Pro - Smart Operations",
-"description": "Aplikasi Manajemen Operasional MHS",
-"icons": [
-{
-"src": "https://www.image2url.com/r2/default/files/1790301105424-7b6b60f2-4ebe-41f8-a0d1-384221bc41ad.png",
-"type": "image/png",
-"sizes": "192x192",
-"purpose": "any maskable"
-},
-{
-"src": "https://www.image2url.com/r2/default/files/1790301105424-7b6b60f2-4ebe-41f8-a0d1-384221bc41ad.png",
-"type": "image/png",
-"sizes": "512x512",
-"purpose": "any maskable"
-}
-],
-"start_url": "./index.html",
-"display": "standalone",
-"theme_color": "#0B1B3D",
-"background_color": "#0B1B3D"
+  "short_name": "MHS Pro",
+  "name": "MHS Pro - Smart Operations",
+  "description": "Aplikasi Manajemen Operasional MHS",
+  "icons": [
+    {
+      "src": "./icon.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "./index.html",
+  "display": "standalone",
+  "theme_color": "#0B1B3D",
+  "background_color": "#0B1B3D"
 }
