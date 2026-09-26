@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MHS Pro - Smart Operations</title>
     
-    <!-- PWA Meta Tags (Ini yang sebelumnya kurang) -->
+    <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0B1B3D">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="MHS Pro">
     
-    <!-- Favicon & Apple Touch Icon (Diperbarui dengan gambar PNG baru untuk mendukung WebAPK) -->
+    <!-- Favicon & Apple Touch Icon -->
     <link rel="icon" type="image/png" href="https://www.image2url.com/r2/default/files/1790301105424-7b6b60f2-4ebe-41f8-a0d1-384221bc41ad.png">
     <link rel="apple-touch-icon" href="https://www.image2url.com/r2/default/files/1790301105424-7b6b60f2-4ebe-41f8-a0d1-384221bc41ad.png">
 
@@ -78,7 +78,7 @@
     <div id="root"></div>
 
     <script>
-        // Pendaftaran Service Worker untuk PWA (Ini yang sebelumnya kurang)
+        // Pendaftaran Service Worker untuk PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
@@ -86,7 +86,7 @@
                         console.log('PWA ServiceWorker terdaftar dengan sukses: ', registration.scope);
                     })
                     .catch(err => {
-                        console.log('Gagal mendaftar PWA ServiceWorker (pastikan file sw.js dan manifest.json sudah dibuat di root folder): ', err);
+                        console.log('Gagal mendaftar PWA ServiceWorker: ', err);
                     });
             });
         }
