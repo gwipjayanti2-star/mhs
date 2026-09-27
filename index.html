@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="MHS Pro">
     
-    <!-- Favicon & Apple Touch Icon -->
+    <!-- Favicon -->
     <link rel="icon" type="image/png" href="https://www.image2url.com/r2/default/files/1790301105424-7b6b60f2-4ebe-41f8-a0d1-384221bc41ad.png">
     <link rel="apple-touch-icon" href="https://www.image2url.com/r2/default/files/1790301105424-7b6b60f2-4ebe-41f8-a0d1-384221bc41ad.png">
 
@@ -22,7 +22,7 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- Libraries for Export to Image/PDF -->
+    <!-- Libraries for Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
@@ -36,29 +36,14 @@
             background-color: #F4F7F9;
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes scaleIn {
-            0% { opacity: 0; transform: scale(0.9); }
-            100% { opacity: 1; transform: scale(1); }
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleIn { 0% { opacity: 0; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
         
-        .animate-fade-in {
-            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        .animate-scale-in {
-            animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        }
+        .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-scale-in { animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 24px); }
-        
-        .ease-spring {
-            transition-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
+        .ease-spring { transition-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
         .custom-date-input::-webkit-calendar-picker-indicator {
             background: transparent; bottom: 0; color: transparent; cursor: pointer;
@@ -70,22 +55,20 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
+        /* Smooth scrolling for nav */
+        .nav-scroll-container::-webkit-scrollbar { display: none; }
+        .nav-scroll-container { -ms-overflow-style: none; scrollbar-width: none; }
+        
         html, body { overflow-x: hidden; }
-
-        /* Fallback for icon sizing */
         .lucide { display: inline-block; }
     </style>
 </head>
 <body class="font-sans bg-[#F4F7F9] text-slate-800 selection:bg-blue-200">
-    
-    <!-- Root Container -->
     <div id="root"></div>
 
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(() => {});
-            });
+            window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
         }
 
         const API_URL = "https://script.google.com/macros/s/AKfycbxnWOh6-FIn5v_kNalNsIi4QgZoRJ_6htXU_N0AWln2-nUWPTuEuRRwr9mjMCTB6TODdQ/exec";
@@ -127,13 +110,6 @@
             return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
         };
 
-        const formatDateToYYYYMMDD = (dateStr) => {
-            if (!dateStr) return '';
-            const d = new Date(dateStr);
-            if (isNaN(d.getTime())) return dateStr;
-            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        };
-
         const formatTime = (timeStr) => {
             if (!timeStr || timeStr === '-') return '-';
             if (typeof timeStr === 'string') {
@@ -163,9 +139,10 @@
                 isSyncing: false,
                 db: { lastStock: null, opnameLogs: [], bulkyLogs: [], maintenanceLogs: [] },
                 stockForm: null,
-                recapFilters: { week: 'all', day: 'all', searchOpen: false, searchTxt: '' },
+                recapFilters: { week: 'all', day: 'all' },
+                bulkyFilters: { week: getWeekNumber(new Date()).toString(), day: 'all' },
+                traceFilters: { searchTxt: '' },
                 selectedOpnameForBulky: null, 
-                bulkyFilters: { week: getWeekNumber(new Date()).toString(), day: 'all', searchOpen: false, searchTxt: '' },
                 bulkyForm: null,
                 maintenanceForm: null,
                 selectedMerkRecap: null 
@@ -194,6 +171,7 @@
                     case 'stock': content = Views.StockForm(); break;
                     case 'recap': content = Views.OpnameRecap(); break;
                     case 'bulky': content = Views.BulkyForm(); break;
+                    case 'trace': content = Views.Traceability(); break;
                     case 'maintenance': content = Views.MaintenanceForm(); break;
                 }
                 container.innerHTML = content;
@@ -216,6 +194,7 @@
                         iconContainer.className = 'icon-container transition-all duration-300 text-blue-600 transform -translate-y-1 drop-shadow-sm';
                         label.className = 'nav-label text-[9px] sm:text-[10px] mt-1 transition-all duration-300 font-black text-blue-700';
                         if (icon) { icon.style.width = '24px'; icon.style.height = '24px'; }
+                        el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); // Auto scroll for smaller screens
                     } else {
                         iconContainer.className = 'icon-container transition-all duration-300 text-slate-400 group-hover:text-slate-600 group-hover:-translate-y-0.5';
                         label.className = 'nav-label text-[9px] sm:text-[10px] mt-1 transition-all duration-300 font-bold text-slate-400';
@@ -227,12 +206,17 @@
             updateNavIndicator: function() {
                 const indicator = document.getElementById('nav-indicator');
                 if (!indicator) return;
-                let tabs = ['dashboard', 'stock', 'recap', 'bulky', 'maintenance'];
-                if (this.state.user?.role === 'viewer') tabs = ['dashboard', 'recap', 'bulky', 'maintenance'];
+                let tabs = ['dashboard', 'stock', 'recap', 'bulky', 'trace', 'maintenance'];
+                if (this.state.user?.role === 'viewer') tabs = ['dashboard', 'recap', 'bulky', 'trace', 'maintenance'];
                 const activeIndex = tabs.indexOf(this.state.activeTab);
-                const tabWidthPercentage = 100 / tabs.length;
-                indicator.style.left = `calc(${activeIndex * tabWidthPercentage}% + 8px)`;
-                indicator.style.width = `calc(${tabWidthPercentage}% - 16px)`;
+                
+                // Kalkulasi lebar dan posisi dinamis berdasarkan scroll container
+                const navItems = document.querySelectorAll('.nav-item');
+                if(navItems.length > 0 && navItems[activeIndex]) {
+                    const activeEl = navItems[activeIndex];
+                    indicator.style.width = `${activeEl.offsetWidth - 16}px`;
+                    indicator.style.left = `${activeEl.offsetLeft + 8}px`;
+                }
             },
 
             showGlobalMessage: function(msg, isError = true) {
@@ -297,7 +281,7 @@
                         this.state.loginError = "Login Gagal: Username atau Password salah.";
                     }
                 } catch (err) {
-                    this.state.loginError = "Koneksi ditolak server (CORS/Network Error). Pastikan API_URL valid.";
+                    this.state.loginError = "Koneksi ditolak server. Pastikan API_URL valid dan internet stabil.";
                 }
                 this.state.isAuthLoading = false;
                 if(!this.state.user) this.render();
@@ -312,11 +296,11 @@
                     const res = await fetch(`${API_URL}?action=getData`);
                     const data = await res.json();
                     this.state.db = data;
-                    if(['dashboard', 'recap', 'maintenance', 'bulky'].includes(this.state.activeTab)) {
+                    if(['dashboard', 'recap', 'maintenance', 'bulky', 'trace'].includes(this.state.activeTab)) {
                          this.renderActiveTab();
                     }
                 } catch (err) {
-                    this.showGlobalMessage("Gagal sinkronisasi data.");
+                    this.showGlobalMessage("Gagal sinkronisasi data dari Google Sheets.");
                 }
                 this.state.isSyncing = false;
                 this.updateSyncUI(false);
@@ -478,7 +462,7 @@
 
             Layout: () => {
                 const createNavItem = (id, icon, label) => `
-                    <button onclick="app.switchTab('${id}')" class="nav-item flex-1 flex flex-col items-center justify-center py-2 relative z-10 group outline-none" data-id="${id}">
+                    <button onclick="app.switchTab('${id}')" class="nav-item flex-none w-[20%] sm:w-[16.6%] min-w-[70px] flex flex-col items-center justify-center py-2 relative z-10 group outline-none" data-id="${id}">
                         <div class="icon-container transition-all duration-300 ${app.state.activeTab === id ? 'text-blue-600 transform -translate-y-1 drop-shadow-sm' : 'text-slate-400 group-hover:text-slate-600 group-hover:-translate-y-0.5'}">
                             <i data-lucide="${icon}" style="width: 24px; height: 24px;"></i>
                         </div>
@@ -521,12 +505,13 @@
 
                     <nav class="fixed bottom-0 left-0 w-full z-30 pb-safe px-2 sm:px-4 pt-4 pointer-events-none">
                         <div class="max-w-md mx-auto pointer-events-auto">
-                            <div class="bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-[2rem] shadow-[0_20px_40px_-10px_rgba(11,27,61,0.15)] p-2 mb-4 relative overflow-hidden flex" id="bottom-nav">
-                                <div id="nav-indicator" class="absolute h-[calc(100%-16px)] bg-blue-50 rounded-[1.5rem] transition-all duration-500 ease-spring z-0" style="top: 8px;"></div>
+                            <div class="bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-[2rem] shadow-[0_20px_40px_-10px_rgba(11,27,61,0.15)] p-2 mb-4 relative overflow-hidden flex overflow-x-auto nav-scroll-container snap-x snap-mandatory" id="bottom-nav">
+                                <div id="nav-indicator" class="absolute h-[calc(100%-16px)] bg-blue-50 rounded-[1.5rem] transition-all duration-500 ease-spring z-0 pointer-events-none" style="top: 8px;"></div>
                                 ${createNavItem('dashboard', 'bar-chart-3', 'Dasbor')}
                                 ${app.state.user?.role === 'operator' ? createNavItem('stock', 'clipboard-list', 'Opname') : ''}
                                 ${createNavItem('recap', 'file-clock', 'Rekap')}
                                 ${createNavItem('bulky', 'truck', 'Bulky')}
+                                ${createNavItem('trace', 'search', 'Lacak')}
                                 ${createNavItem('maintenance', 'settings-2', 'Kendala')}
                             </div>
                         </div>
@@ -548,8 +533,6 @@
                     const fillPercentage = (akhirVal / maxCapacity) * 100;
                     const fillClass = color === 'blue' ? 'bg-gradient-to-t from-blue-500 to-blue-300' : 'bg-gradient-to-t from-emerald-500 to-emerald-300';
                     const borderColor = color === 'blue' ? 'border-t-blue-500' : 'border-t-emerald-500';
-
-                    // Fix error html2canvas: cegah box ukuran 0 untuk kalkulasi gradient render
                     const fillStyle = fillPercentage > 0 ? `height: ${Math.min(100, fillPercentage)}%;` : `height: 0px; display: none;`;
 
                     let content = `
@@ -695,28 +678,18 @@
                         </div>
                         
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                            ${Components.ModernSelect({
-                                id: `sf-${siloKey}-merk`, label: "Merk Terigu", value: data.merk, options: options,
-                                onChange: `Handlers.updateStockForm('${siloKey}', 'merk', this.value)`
-                            })}
+                            ${Components.ModernSelect({ id: `sf-${siloKey}-merk`, label: "Merk Terigu", value: data.merk, options: options, onChange: `Handlers.updateStockForm('${siloKey}', 'merk', this.value)` })}
                             <div id="sf-${siloKey}-customMerk-container" class="${data.merk === 'LAINNYA' ? 'block' : 'hidden sm:block'}">
-                                ${data.merk === 'LAINNYA' ? Components.FloatingInput({
-                                    id: `sf-${siloKey}-customMerk`, label: "Ketik Merk", value: data.customMerk,
-                                    onInput: `Handlers.updateStockForm('${siloKey}', 'customMerk', this.value)`
-                                }) : ''}
+                                ${data.merk === 'LAINNYA' ? Components.FloatingInput({ id: `sf-${siloKey}-customMerk`, label: "Ketik Merk", value: data.customMerk, onInput: `Handlers.updateStockForm('${siloKey}', 'customMerk', this.value)` }) : ''}
                             </div>
                         </div>
 
                         <div class="bg-slate-50/80 p-3 sm:p-4 rounded-2xl border border-slate-200/60 mb-5 shadow-inner">
-                            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center">
-                                <i data-lucide="download" class="mr-1.5" style="width: 14px; height: 14px;"></i> Pemasukan Shift
-                            </p>
+                            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center"><i data-lucide="download" class="mr-1.5" style="width: 14px; height: 14px;"></i> Pemasukan Shift</p>
                             <div class="grid grid-cols-2 gap-3">
                                 ${Components.FloatingInput({ id: `sf-${siloKey}-masukZak`, label: "Jml Masuk Zak", type: "number", suffix: "kg", value: data.masukZak, onInput: `Handlers.updateStockForm('${siloKey}', 'masukZak', this.value)` })}
                                 ${Components.FloatingInput({ id: `sf-${siloKey}-masukBulky`, label: "Jml Masuk Bulky", type: "number", suffix: "kg", value: data.masukBulky, onInput: `Handlers.updateStockForm('${siloKey}', 'masukBulky', this.value)` })}
-                                <div class="col-span-2">
-                                    ${Components.FloatingInput({ id: `sf-${siloKey}-gluten`, label: "Gluten % (Jika ada pemasukan)", type: "number", step: "0.1", suffix: "%", value: data.gluten, onInput: `Handlers.updateStockForm('${siloKey}', 'gluten', this.value)` })}
-                                </div>
+                                <div class="col-span-2">${Components.FloatingInput({ id: `sf-${siloKey}-gluten`, label: "Gluten % (Jika ada pemasukan)", type: "number", step: "0.1", suffix: "%", value: data.gluten, onInput: `Handlers.updateStockForm('${siloKey}', 'gluten', this.value)` })}</div>
                             </div>
                         </div>
 
@@ -736,26 +709,20 @@
                 return `
                 <div class="max-w-2xl mx-auto space-y-6 pb-8 animate-fade-in">
                     ${Components.Card(`
-                        <div class="absolute top-0 right-0 w-40 h-40 sm:w-48 sm:h-48 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                        <div class="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
                         <div class="relative z-10">
                             <div class="flex justify-between items-center mb-5 sm:mb-6">
-                                <div>
-                                    <h2 class="text-xl sm:text-2xl font-black mb-1 tracking-tight">Opname Harian</h2>
-                                    <p class="text-[10px] sm:text-xs text-blue-200 font-bold uppercase tracking-widest flex items-center"><i data-lucide="clock" class="mr-1.5" style="width: 12px; height: 12px;"></i> Data Shift Berjalan</p>
-                                </div>
+                                <div><h2 class="text-xl sm:text-2xl font-black mb-1 tracking-tight">Opname Harian</h2><p class="text-[10px] sm:text-xs text-blue-200 font-bold uppercase tracking-widest flex items-center"><i data-lucide="clock" class="mr-1.5" style="width: 12px; height: 12px;"></i> Data Shift Berjalan</p></div>
                             </div>
-                            
                             <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-5">
                                 <div class="bg-black/20 p-3 rounded-xl sm:rounded-2xl backdrop-blur-sm border border-white/10">
-                                    <label class="block text-[9px] sm:text-[10px] font-black text-blue-200 mb-1 sm:mb-1.5 uppercase tracking-widest">Tanggal</label>
+                                    <label class="block text-[9px] font-black text-blue-200 mb-1 sm:mb-1.5 uppercase tracking-widest">Tanggal</label>
                                     <input type="date" id="sf-tanggal" value="${fData.tanggal}" onchange="app.state.stockForm.tanggal = this.value" class="w-full bg-transparent text-white text-sm sm:text-base font-bold outline-none custom-date-input" />
                                 </div>
                                 <div class="bg-black/20 p-3 rounded-xl sm:rounded-2xl backdrop-blur-sm border border-white/10">
-                                    <label class="block text-[9px] sm:text-[10px] font-black text-blue-200 mb-1 sm:mb-1.5 uppercase tracking-widest">Shift</label>
+                                    <label class="block text-[9px] font-black text-blue-200 mb-1 sm:mb-1.5 uppercase tracking-widest">Shift</label>
                                     <select id="sf-shift" onchange="app.state.stockForm.shift = this.value" class="w-full bg-transparent text-white text-sm sm:text-base font-bold outline-none appearance-none">
-                                        <option value="1" class="text-slate-800" ${fData.shift === '1' ? 'selected' : ''}>Shift 1</option>
-                                        <option value="2" class="text-slate-800" ${fData.shift === '2' ? 'selected' : ''}>Shift 2</option>
-                                        <option value="3" class="text-slate-800" ${fData.shift === '3' ? 'selected' : ''}>Shift 3</option>
+                                        <option value="1" class="text-slate-800" ${fData.shift === '1' ? 'selected' : ''}>Shift 1</option><option value="2" class="text-slate-800" ${fData.shift === '2' ? 'selected' : ''}>Shift 2</option><option value="3" class="text-slate-800" ${fData.shift === '3' ? 'selected' : ''}>Shift 3</option>
                                     </select>
                                 </div>
                             </div>
@@ -769,10 +736,7 @@
                         ${SiloSectionHTML("Silo 4", "Medium", "silo4", SILO_MERK_OPTIONS.medium)}
 
                         ${Components.Card(`
-                            <h3 class="font-black text-slate-800 text-lg sm:text-lg mb-4 sm:mb-5 flex items-center border-b border-slate-100 pb-3 sm:pb-4">
-                                <div class="p-2 sm:p-2.5 bg-amber-100 text-amber-700 rounded-xl mr-3"><i data-lucide="box" stroke-width="2.5" style="width: 18px; height: 18px;"></i></div>
-                                Mini Silo Tapioka
-                            </h3>
+                            <h3 class="font-black text-slate-800 text-lg sm:text-lg mb-4 sm:mb-5 flex items-center border-b border-slate-100 pb-3 sm:pb-4"><div class="p-2 sm:p-2.5 bg-amber-100 text-amber-700 rounded-xl mr-3"><i data-lucide="box" stroke-width="2.5" style="width: 18px; height: 18px;"></i></div> Mini Silo Tapioka</h3>
                             <div class="grid grid-cols-1 gap-3 mb-4 sm:mb-5">
                                 ${Components.FloatingInput({ id: 'sf-tapioka-merk', label: "Merk Tapioka", value: fData.tapioka.merk, onInput: "app.state.stockForm.tapioka.merk = this.value", required: true })}
                                 ${Components.FloatingInput({ label: "Stock Awal", type: "number", suffix: "kg", value: fData.tapioka.awal, disabled: true })}
@@ -781,17 +745,14 @@
                                     ${Components.FloatingInput({ id: 'sf-tapioka-akhir', label: "Stock Akhir *", type: "number", suffix: "kg", value: fData.tapioka.akhir, required: true, onInput: "Handlers.updateStockForm('tapioka', 'akhir', this.value)" })}
                                 </div>
                             </div>
-                            <div class="flex justify-between items-center bg-slate-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-inner">
+                            <div class="flex justify-between items-center bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200 shadow-inner">
                                 <span class="font-black text-slate-500 uppercase text-[10px] sm:text-[11px] tracking-widest">Pemakaian:</span> 
                                 <span class="font-black text-xl sm:text-2xl text-slate-800"><span id="pemakaian-tapioka">${calcPakai(fData.tapioka.awal, fData.tapioka.masuk, fData.tapioka.akhir)}</span> <span class="text-xs sm:text-sm font-semibold opacity-60">kg</span></span>
                             </div>
                         `, 'mb-6')}
 
                         ${Components.Card(`
-                            <h3 class="font-black text-slate-800 text-lg mb-4 flex items-center border-b border-slate-100 pb-3">
-                                <div class="p-2 bg-indigo-100 text-indigo-700 rounded-xl mr-3"><i data-lucide="box" stroke-width="2.5" style="width: 18px; height: 18px;"></i></div>
-                                Gula Mesh 30
-                            </h3>
+                            <h3 class="font-black text-slate-800 text-lg mb-4 flex items-center border-b border-slate-100 pb-3"><div class="p-2 bg-indigo-100 text-indigo-700 rounded-xl mr-3"><i data-lucide="box" stroke-width="2.5" style="width: 18px; height: 18px;"></i></div> Gula Mesh 30</h3>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 ${Components.FloatingInput({ id: 'sf-gula-merk', label: "Merk Gula", value: fData.gula.merk, required: true, onInput: "app.state.stockForm.gula.merk = this.value" })}
                                 ${Components.FloatingInput({ id: 'sf-gula-akhir', label: "Total Opname", type: "number", suffix: "kg", value: fData.gula.akhir, required: true, onInput: "app.state.stockForm.gula.akhir = this.value" })}
@@ -799,16 +760,13 @@
                         `, 'mb-6')}
 
                         ${Components.Card(`
-                            <h3 class="font-black text-slate-800 text-md sm:text-lg mb-3 flex items-center">
-                                <div class="p-1.5 sm:p-2 bg-blue-50 text-blue-600 rounded-lg mr-2"><i data-lucide="pen-tool" stroke-width="2.5" style="width: 16px; height: 16px;"></i></div>
-                                Catatan Opname & Handover
-                            </h3>
+                            <h3 class="font-black text-slate-800 text-md sm:text-lg mb-3 flex items-center"><div class="p-1.5 sm:p-2 bg-blue-50 text-blue-600 rounded-lg mr-2"><i data-lucide="pen-tool" stroke-width="2.5" style="width: 16px; height: 16px;"></i></div> Catatan Opname & Handover</h3>
                             <div class="flex items-start bg-slate-50 p-1 rounded-2xl border border-slate-200 mb-3 shadow-inner">
                                 <textarea rows="2" id="sf-catatanOpname" oninput="app.state.stockForm.catatanOpname = this.value" placeholder="Catatan operasional..." class="w-full bg-transparent p-3 text-sm font-medium text-slate-800 outline-none resize-none placeholder-slate-400">${fData.catatanOpname}</textarea>
                             </div>
                             <div class="space-y-2.5">
                                 ${[0, 1, 2, 3].map(i => `
-                                    <div class="flex items-start bg-white p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm">
+                                    <div class="flex items-start bg-white p-1.5 sm:p-2 rounded-xl border border-slate-200 shadow-sm">
                                         <span class="text-slate-400 text-[10px] sm:text-xs font-black w-8 text-center pt-2 sm:pt-2.5">${i + 1}.</span>
                                         <textarea rows="1" oninput="app.state.stockForm.serahTerima[${i}] = this.value; this.style.height='auto'; this.style.height=this.scrollHeight+'px';" placeholder="Handover..." class="flex-1 bg-transparent p-1.5 sm:p-2 text-xs sm:text-sm font-medium text-slate-800 outline-none resize-none overflow-hidden">${fData.serahTerima[i]}</textarea>
                                     </div>
@@ -818,11 +776,10 @@
 
                         <div class="mt-8 w-full pb-8">
                             <div class="flex gap-2 sm:gap-3 flex-col sm:flex-row">
-                                <button type="submit" id="sf-submit-btn" class="w-full sm:flex-[2] bg-slate-900 hover:bg-black text-white py-3.5 sm:py-4 rounded-xl sm:rounded-2xl flex items-center justify-center font-black transition-all shadow-lg active:scale-95 text-sm disabled:opacity-70 disabled:cursor-wait">
-                                    <i data-lucide="save" id="sf-submit-icon" class="mr-2" style="width: 18px; height: 18px;"></i> 
-                                    <span id="sf-submit-text">Simpan Opname</span>
+                                <button type="submit" id="sf-submit-btn" class="w-full sm:flex-[2] bg-slate-900 hover:bg-black text-white py-3.5 sm:py-4 rounded-xl flex items-center justify-center font-black transition-all shadow-lg active:scale-95 text-sm disabled:opacity-70 disabled:cursor-wait">
+                                    <i data-lucide="save" id="sf-submit-icon" class="mr-2" style="width: 18px; height: 18px;"></i> <span id="sf-submit-text">Simpan Opname</span>
                                 </button>
-                                <button type="button" onclick="Handlers.shareOpnameWA()" class="w-full sm:flex-[1] bg-white text-blue-700 border border-slate-200 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl flex items-center justify-center font-black transition-all shadow-lg active:scale-95 text-sm mt-3 sm:mt-0">
+                                <button type="button" onclick="Handlers.shareOpnameWA()" class="w-full sm:flex-[1] bg-white text-blue-700 border border-slate-200 py-3.5 sm:py-4 rounded-xl flex items-center justify-center font-black transition-all shadow-lg active:scale-95 text-sm mt-3 sm:mt-0">
                                     <i data-lucide="share-2" class="mr-2" style="width: 18px; height: 18px;"></i> Bagikan WA
                                 </button>
                             </div>
@@ -867,9 +824,7 @@
                 if (app.state.selectedOpnameForBulky) {
                     const { tanggal, shift } = app.state.selectedOpnameForBulky;
                     const opnameDate = formatDateToYYYYMMDD(tanggal);
-                    const matchingBulky = app.state.db.bulkyLogs?.filter(b => 
-                        formatDateToYYYYMMDD(b.tanggal) === opnameDate && String(b.shift) === String(shift)
-                    ) || [];
+                    const matchingBulky = app.state.db.bulkyLogs?.filter(b => formatDateToYYYYMMDD(b.tanggal) === opnameDate && String(b.shift) === String(shift)) || [];
                     
                     opnameBulkyModalHtml = `
                     <div class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 animate-fade-in" onclick="Handlers.closeOpnameBulkyModal()">
@@ -879,16 +834,11 @@
                                     <h3 class="font-black text-slate-800 text-lg flex items-center gap-2"><i data-lucide="truck" class="text-blue-600" style="width: 18px; height: 18px;"></i> Rincian Bulky</h3>
                                     <p class="text-[10px] font-bold text-slate-500 mt-0.5">${formatDate(tanggal)} • Shift ${shift}</p>
                                 </div>
-                                <button onclick="Handlers.closeOpnameBulkyModal()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95">
-                                    <i data-lucide="x" style="width: 18px; height: 18px;"></i>
-                                </button>
+                                <button onclick="Handlers.closeOpnameBulkyModal()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95"><i data-lucide="x" style="width: 18px; height: 18px;"></i></button>
                             </div>
                             <div class="p-4 overflow-y-auto space-y-3">
                                 ${matchingBulky.length === 0 ? `
-                                    <div class="text-center py-8">
-                                        <div class="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><i data-lucide="inbox" class="text-slate-400"></i></div>
-                                        <p class="text-sm font-semibold text-slate-500">Tidak ada data bulky dibongkar pada shift ini.</p>
-                                    </div>
+                                    <div class="text-center py-8"><div class="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><i data-lucide="inbox" class="text-slate-400"></i></div><p class="text-sm font-semibold text-slate-500">Tidak ada data bulky dibongkar pada shift ini.</p></div>
                                 ` : matchingBulky.map(log => `
                                     <div class="bg-white border border-slate-200 shadow-sm rounded-2xl p-4">
                                         <div class="flex justify-between items-start mb-3">
@@ -920,16 +870,10 @@
 
                 let listHtml = '';
                 if (filteredLogs.length === 0) {
-                    listHtml = `
-                    <div class="text-center p-8 bg-slate-50 rounded-3xl border border-slate-200 border-dashed mt-4">
-                        <i data-lucide="clipboard-list" class="mx-auto text-slate-300 mb-3" style="width: 32px; height: 32px;"></i>
-                        <p class="text-sm font-semibold text-slate-500">Tidak ada riwayat untuk filter yang dipilih.</p>
-                    </div>`;
+                    listHtml = `<div class="text-center p-8 bg-slate-50 rounded-3xl border border-slate-200 border-dashed mt-4"><i data-lucide="clipboard-list" class="mx-auto text-slate-300 mb-3" style="width: 32px; height: 32px;"></i><p class="text-sm font-semibold text-slate-500">Tidak ada riwayat untuk filter yang dipilih.</p></div>`;
                 } else {
                     listHtml = `<div class="space-y-4"><div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Menampilkan ${filteredLogs.length} Data</div>`;
                     listHtml += filteredLogs.map(log => {
-                        const tglStr = formatDate(log.tanggal);
-                        const hariStr = getDayName(log.tanggal);
                         let notesHtml = '';
                         if(log.catatanOpname && log.catatanOpname.trim() !== '') {
                             notesHtml = `
@@ -941,10 +885,7 @@
 
                         return Components.Card(`
                             <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-                                <div>
-                                    <div class="font-black text-slate-800 text-sm">${hariStr}, ${tglStr}</div>
-                                    <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Disimpan: ${new Date(log.timestamp).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})}</div>
-                                </div>
+                                <div><div class="font-black text-slate-800 text-sm">${getDayName(log.tanggal)}, ${formatDate(log.tanggal)}</div><div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Disimpan: ${new Date(log.timestamp).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})}</div></div>
                                 <div class="flex items-center gap-2">
                                     <button type="button" onclick="Handlers.showOpnameBulky('${log.tanggal}', '${log.shift}')" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-2.5 py-1.5 rounded-lg border border-blue-100 text-[10px] font-black flex items-center gap-1.5 active:scale-95 transition-all shadow-sm">
                                         <i data-lucide="truck" style="width: 12px; height: 12px;"></i> Bulky
@@ -954,58 +895,16 @@
                             </div>
                             <div class="overflow-x-auto bg-white">
                                 <table class="w-full text-left text-xs sm:text-sm border-collapse">
-                                    <thead>
-                                        <tr class="bg-slate-100/50 text-slate-500 uppercase tracking-wider text-[9px] sm:text-[10px]">
-                                            <th class="p-3 sm:px-4 sm:py-3 font-black w-[35%]">Item / Silo</th>
-                                            <th class="p-3 sm:px-4 sm:py-3 font-black text-right">Awal</th>
-                                            <th class="p-3 sm:px-4 sm:py-3 font-black text-right">Masuk</th>
-                                            <th class="p-3 sm:px-4 sm:py-3 font-black text-right text-blue-600">Pakai</th>
-                                            <th class="p-3 sm:px-4 sm:py-3 font-black text-right">Akhir</th>
-                                        </tr>
-                                    </thead>
+                                    <thead><tr class="bg-slate-100/50 text-slate-500 uppercase tracking-wider text-[9px] sm:text-[10px]">
+                                        <th class="p-3 sm:px-4 sm:py-3 font-black w-[35%]">Item / Silo</th><th class="p-3 sm:px-4 sm:py-3 font-black text-right">Awal</th><th class="p-3 sm:px-4 sm:py-3 font-black text-right">Masuk</th><th class="p-3 sm:px-4 sm:py-3 font-black text-right text-blue-600">Pakai</th><th class="p-3 sm:px-4 sm:py-3 font-black text-right">Akhir</th>
+                                    </tr></thead>
                                     <tbody class="divide-y divide-slate-100">
-                                        <tr class="hover:bg-slate-50/50 transition-colors">
-                                            <td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 1 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo1?.merk}</span></td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo1?.awal || 0}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo1)}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo1?.awal, getTotalMasuk(log.silo1), log.silo1?.akhir)}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo1?.akhir || 0}</td>
-                                        </tr>
-                                        <tr class="hover:bg-slate-50/50 transition-colors">
-                                            <td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 2 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo2?.merk}</span></td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo2?.awal || 0}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo2)}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo2?.awal, getTotalMasuk(log.silo2), log.silo2?.akhir)}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo2?.akhir || 0}</td>
-                                        </tr>
-                                        <tr class="hover:bg-slate-50/50 transition-colors">
-                                            <td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 3 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo3?.merk}</span></td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo3?.awal || 0}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo3)}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo3?.awal, getTotalMasuk(log.silo3), log.silo3?.akhir)}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo3?.akhir || 0}</td>
-                                        </tr>
-                                        <tr class="hover:bg-slate-50/50 transition-colors">
-                                            <td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 4 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo4?.merk}</span></td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo4?.awal || 0}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo4)}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo4?.awal, getTotalMasuk(log.silo4), log.silo4?.akhir)}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo4?.akhir || 0}</td>
-                                        </tr>
-                                        <tr class="hover:bg-slate-50/50 transition-colors bg-amber-50/20">
-                                            <td class="p-3 sm:px-4 sm:py-3 font-bold text-amber-900">Tapioka <span class="block text-[9px] text-amber-700/60 font-semibold">${log.tapioka?.merk}</span></td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.tapioka?.awal || 0}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.tapioka?.masuk || '-'}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.tapioka?.awal, log.tapioka?.masuk, log.tapioka?.akhir)}</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.tapioka?.akhir || 0}</td>
-                                        </tr>
-                                        <tr class="hover:bg-slate-50/50 transition-colors bg-indigo-50/20">
-                                            <td class="p-3 sm:px-4 sm:py-3 font-bold text-indigo-900">Gula <span class="block text-[9px] text-indigo-700/60 font-semibold">${log.gula?.merk}</span></td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right text-slate-400">-</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right text-slate-400">-</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right text-slate-400 bg-blue-50/30">-</td>
-                                            <td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.gula?.akhir || 0}</td>
-                                        </tr>
+                                        <tr class="hover:bg-slate-50/50 transition-colors"><td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 1 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo1?.merk}</span></td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo1?.awal || 0}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo1)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo1?.awal, getTotalMasuk(log.silo1), log.silo1?.akhir)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo1?.akhir || 0}</td></tr>
+                                        <tr class="hover:bg-slate-50/50 transition-colors"><td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 2 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo2?.merk}</span></td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo2?.awal || 0}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo2)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo2?.awal, getTotalMasuk(log.silo2), log.silo2?.akhir)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo2?.akhir || 0}</td></tr>
+                                        <tr class="hover:bg-slate-50/50 transition-colors"><td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 3 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo3?.merk}</span></td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo3?.awal || 0}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo3)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo3?.awal, getTotalMasuk(log.silo3), log.silo3?.akhir)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo3?.akhir || 0}</td></tr>
+                                        <tr class="hover:bg-slate-50/50 transition-colors"><td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 4 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo4?.merk}</span></td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo4?.awal || 0}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo4)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo4?.awal, getTotalMasuk(log.silo4), log.silo4?.akhir)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo4?.akhir || 0}</td></tr>
+                                        <tr class="hover:bg-slate-50/50 transition-colors bg-amber-50/20"><td class="p-3 sm:px-4 sm:py-3 font-bold text-amber-900">Tapioka <span class="block text-[9px] text-amber-700/60 font-semibold">${log.tapioka?.merk}</span></td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.tapioka?.awal || 0}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.tapioka?.masuk || '-'}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.tapioka?.awal, log.tapioka?.masuk, log.tapioka?.akhir)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.tapioka?.akhir || 0}</td></tr>
+                                        <tr class="hover:bg-slate-50/50 transition-colors bg-indigo-50/20"><td class="p-3 sm:px-4 sm:py-3 font-bold text-indigo-900">Gula <span class="block text-[9px] text-indigo-700/60 font-semibold">${log.gula?.merk}</span></td><td class="p-3 sm:px-4 sm:py-3 text-right text-slate-400">-</td><td class="p-3 sm:px-4 sm:py-3 text-right text-slate-400">-</td><td class="p-3 sm:px-4 sm:py-3 text-right text-slate-400 bg-blue-50/30">-</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.gula?.akhir || 0}</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -1014,10 +913,6 @@
                     }).join('') + '</div>';
                 }
 
-                let weeks = [{ id: 'all', label: 'Semua Minggu' }];
-                for (let i = 1; i <= 52; i++) weeks.push({ id: i.toString(), label: `Minggu Ke-${i}` });
-                let displayValue = filters.week === 'all' ? 'Semua Minggu' : `Minggu Ke-${filters.week}`;
-                let filteredWeeks = weeks.filter(w => w.label.toLowerCase().includes(filters.searchTxt.toLowerCase()) || w.id === filters.searchTxt);
                 let daysOptions = `<option value="all" class="text-slate-800">Semua Hari</option>`;
                 DAYS_OF_WEEK.forEach(day => { daysOptions += `<option value="${day}" class="text-slate-800" ${filters.day === day ? 'selected' : ''}>${day}</option>`; });
 
@@ -1042,16 +937,10 @@
                             </div>
                         </div>
                         
-                        <div class="relative z-10 grid grid-cols-2 gap-3 no-capture">
-                            <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center relative" id="week-search-container">
+                        <div class="grid grid-cols-2 gap-3 no-capture">
+                            <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center relative">
                                 <i data-lucide="filter" class="text-blue-500 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
-                                <div class="relative w-full flex-1 min-w-0">
-                                    <input type="text" id="week-search-input" class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-slate-400 cursor-pointer truncate" placeholder="Ketik minggu..." value="${filters.searchOpen ? filters.searchTxt : displayValue}" onfocus="Handlers.openRecapSearch()" oninput="Handlers.typeRecapSearch(this.value)" />
-                                    ${filters.searchOpen ? `
-                                    <div class="absolute bottom-full left-0 min-w-[160px] w-full mb-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-[130px] overflow-y-auto z-[60] py-1">
-                                        ${filteredWeeks.length > 0 ? filteredWeeks.map(w => `<button type="button" onclick="Handlers.selectRecapWeek('${w.id}')" class="w-full text-left px-4 py-2.5 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 font-bold transition-colors">${w.label}</button>`).join('') : '<div class="px-4 py-3 text-xs text-slate-400 font-medium">Tidak ada hasil</div>'}
-                                    </div>` : ''}
-                                </div>
+                                <input type="number" id="week-filter-recap" min="1" max="52" class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-slate-400" placeholder="Ketik Minggu..." value="${filters.week === 'all' ? '' : filters.week}" oninput="Handlers.autoFilterWeek('recap', this.value)" />
                             </div>
                             <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center">
                                 <i data-lucide="calendar-days" class="text-blue-500 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
@@ -1072,7 +961,7 @@
                 const { shift: autoShift, date: autoDate } = getCurrentShiftInfo();
                 if (!app.state.bulkyForm) {
                     app.state.bulkyForm = {
-                        tanggalKedatangan: autoDate, tanggal: autoDate, shift: autoShift, noBulky: '', merk: '', tujuanSilo: '',
+                        tanggalKedatangan: autoDate, tanggal: autoDate, shift: autoShift, noBulky: '', merk: '', tujuanSilo: '', customTujuanSilo: '',
                         jamMasuk: '', jamRelease: '', jamBongkar: '', jamSelesai: '', qtyAwal: '', qtyAkhir: '', catatan: ''
                     };
                 }
@@ -1141,10 +1030,6 @@
                     </div>`;
                 }
 
-                let weeks = [{ id: 'all', label: 'Semua Minggu' }];
-                for (let i = 1; i <= 52; i++) weeks.push({ id: i.toString(), label: `Minggu Ke-${i}` });
-                let displayValue = filters.week === 'all' ? 'Semua Minggu' : `Minggu Ke-${filters.week}`;
-                let filteredWeeks = weeks.filter(w => w.label.toLowerCase().includes(filters.searchTxt.toLowerCase()) || w.id === filters.searchTxt);
                 let daysOptions = `<option value="all" class="text-slate-800">Semua Hari</option>`;
                 DAYS_OF_WEEK.forEach(day => { daysOptions += `<option value="${day}" class="text-slate-800" ${filters.day === day ? 'selected' : ''}>${day}</option>`; });
 
@@ -1160,28 +1045,16 @@
                                 <p class="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest">Klik kartu untuk rincian</p>
                             </div>
                             <div class="flex gap-2 flex-wrap justify-end">
-                                <button onclick="Handlers.exportBulkyPDF()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-3 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black flex items-center transition-all shadow-sm active:scale-95 uppercase tracking-wider">
-                                    <i data-lucide="file-text" class="mr-1" style="width: 14px; height: 14px;"></i> PDF
-                                </button>
-                                <button onclick="Handlers.exportBulkyExcel()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 px-3 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black flex items-center transition-all shadow-sm active:scale-95 uppercase tracking-wider">
-                                    <i data-lucide="file-spreadsheet" class="mr-1" style="width: 14px; height: 14px;"></i> Excel
-                                </button>
-                                <button onclick="Handlers.shareBulkyRecap()" class="bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black flex items-center transition-all shadow-sm active:scale-95 uppercase tracking-wider">
-                                    <i data-lucide="share-2" class="mr-1" style="width: 14px; height: 14px;"></i> Share
-                                </button>
+                                <button onclick="Handlers.exportBulkyPDF()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-3 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black flex items-center transition-all shadow-sm active:scale-95 uppercase tracking-wider"><i data-lucide="file-text" class="mr-1" style="width: 14px; height: 14px;"></i> PDF</button>
+                                <button onclick="Handlers.exportBulkyExcel()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 px-3 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black flex items-center transition-all shadow-sm active:scale-95 uppercase tracking-wider"><i data-lucide="file-spreadsheet" class="mr-1" style="width: 14px; height: 14px;"></i> Excel</button>
+                                <button onclick="Handlers.shareBulkyRecap()" class="bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-1.5 sm:px-3 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black flex items-center transition-all shadow-sm active:scale-95 uppercase tracking-wider"><i data-lucide="share-2" class="mr-1" style="width: 14px; height: 14px;"></i> Share</button>
                             </div>
                         </div>
 
-                        <div class="relative z-10 grid grid-cols-2 gap-3 mb-5">
+                        <div class="grid grid-cols-2 gap-3 mb-5">
                             <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center relative">
                                 <i data-lucide="filter" class="text-blue-500 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
-                                <div class="relative w-full flex-1 min-w-0">
-                                    <input type="text" id="week-search-bulky" class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-slate-400 cursor-pointer truncate" placeholder="Ketik minggu..." value="${filters.searchOpen ? filters.searchTxt : displayValue}" onfocus="Handlers.openBulkySearch()" oninput="Handlers.typeBulkySearch(this.value)" />
-                                    ${filters.searchOpen ? `
-                                    <div class="absolute bottom-full left-0 min-w-[160px] w-full mb-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-[130px] overflow-y-auto z-[60] py-1">
-                                        ${filteredWeeks.length > 0 ? filteredWeeks.map(w => `<button type="button" onclick="Handlers.selectBulkyWeek('${w.id}')" class="w-full text-left px-4 py-2.5 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 font-bold transition-colors">${w.label}</button>`).join('') : '<div class="px-4 py-3 text-xs text-slate-400 font-medium">Tidak ada hasil</div>'}
-                                    </div>` : ''}
-                                </div>
+                                <input type="number" id="week-filter-bulky" min="1" max="52" class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-slate-400" placeholder="Ketik Minggu..." value="${filters.week === 'all' ? '' : filters.week}" oninput="Handlers.autoFilterWeek('bulky', this.value)" />
                             </div>
                             <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center">
                                 <i data-lucide="calendar-days" class="text-blue-500 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
@@ -1230,7 +1103,10 @@
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                 ${Components.FloatingInput({ id: 'bf-merk', label: "Merk Terigu", value: fData.merk, required: true, onInput: "app.state.bulkyForm.merk = this.value" })}
-                                ${Components.ModernSelect({ id: 'bf-tujuanSilo', label: "Tujuan Silo *", value: fData.tujuanSilo, required: true, options: ['Silo 1', 'Silo 2', 'Silo 3', 'Silo 4'], onChange: "app.state.bulkyForm.tujuanSilo = this.value" })}
+                                ${Components.ModernSelect({ id: 'bf-tujuanSilo', label: "Tujuan Silo *", value: fData.tujuanSilo, required: true, options: ['Silo 1', 'Silo 2', 'Silo 3', 'Silo 4', 'LAINNYA / MIX'], onChange: "Handlers.updateBulkyTujuan(this.value)" })}
+                            </div>
+                            <div id="bf-customTujuan-container" class="${fData.tujuanSilo === 'LAINNYA / MIX' ? 'block' : 'hidden'} mb-4">
+                                ${Components.FloatingInput({ id: 'bf-customTujuan', label: "Ketik Tujuan Silo Custom", value: fData.customTujuanSilo, onInput: "app.state.bulkyForm.customTujuanSilo = this.value" })}
                             </div>
                             <div class="mb-4">
                                 <div class="relative"><div class="absolute top-3 left-3 pointer-events-none"><i data-lucide="file-text" class="text-slate-400" style="width: 16px; height: 16px;"></i></div><textarea placeholder="Catatan Tambahan (Opsional)..." oninput="app.state.bulkyForm.catatan = this.value" rows="2" class="w-full bg-white text-slate-800 placeholder-slate-400 text-xs sm:text-sm font-semibold pl-9 pr-3 py-2.5 sm:py-3 rounded-2xl outline-none border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm resize-none">${fData.catatan || ''}</textarea></div>
@@ -1256,6 +1132,98 @@
                 </div>`;
             },
             
+            Traceability: () => {
+                const term = app.state.traceFilters.searchTxt.trim().toLowerCase();
+                let results = [];
+                
+                if (term) {
+                    // Cari di Bulky Logs
+                    app.state.db.bulkyLogs?.forEach(log => {
+                        if (log.merk?.toLowerCase().includes(term)) {
+                            results.push({ type: 'bulky', date: log.tanggal, arrival: log.tanggalKedatangan, shift: log.shift, merk: log.merk, noBulky: log.noBulky, tujuan: log.tujuanSilo, qty: log.qtyAkhir, timestamp: new Date(log.timestamp).getTime() || new Date(log.tanggal).getTime() });
+                        }
+                    });
+                    
+                    // Cari di Opname Logs
+                    app.state.db.opnameLogs?.forEach(log => {
+                        ['silo1', 'silo2', 'silo3', 'silo4', 'tapioka'].forEach(silo => {
+                            if (log[silo] && log[silo].merk && log[silo].merk.toLowerCase().includes(term)) {
+                                const totalMasuk = silo === 'tapioka' ? (Number(log[silo].masuk)||0) : (Number(log[silo].masukZak)||0) + (Number(log[silo].masukBulky)||0) + (Number(log[silo].masuk)||0);
+                                const pakai = calcPakai(log[silo].awal, totalMasuk, log[silo].akhir);
+                                if (pakai > 0 || totalMasuk > 0) { // Hanya tampilkan jika ada pemakaian atau pemasukan
+                                    results.push({ type: 'opname', date: log.tanggal, shift: log.shift, siloName: silo.toUpperCase(), merk: log[silo].merk, pakai, masuk: totalMasuk, timestamp: new Date(log.timestamp).getTime() || new Date(log.tanggal).getTime() });
+                                }
+                            }
+                        });
+                    });
+                    
+                    // Urutkan dari terbaru
+                    results.sort((a, b) => b.timestamp - a.timestamp);
+                }
+
+                return `
+                <div class="max-w-2xl mx-auto space-y-6 animate-fade-in pb-8">
+                    ${Components.Card(`
+                        <div class="mb-4">
+                            <h2 class="text-xl font-black mb-1 flex items-center tracking-tight text-slate-800">
+                                <i data-lucide="search" class="mr-2 text-indigo-600" style="width: 22px; height: 22px;"></i> Lacak Material (Traceability)
+                            </h2>
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ketahui histori kedatangan & pemakaian terigu</p>
+                        </div>
+                        <div class="relative mb-2">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><i data-lucide="search" class="text-slate-400" style="width: 18px; height: 18px;"></i></div>
+                            <input type="text" id="trace-search" placeholder="Ketik Merk Terigu (Cth: B7, W3, Falconila)..." value="${app.state.traceFilters.searchTxt}" oninput="Handlers.autoFilterTrace(this.value)" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-bold pl-11 pr-4 py-3 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"/>
+                        </div>
+                    `, 'bg-white border-t-[4px] border-t-indigo-500 shadow-sm', 'p-5 sm:p-6')}
+                    
+                    <div id="trace-results">
+                        ${!term ? `
+                            <div class="text-center p-8 bg-slate-50 rounded-3xl border border-slate-200 border-dashed mt-4"><i data-lucide="scan-line" class="mx-auto text-slate-300 mb-3" style="width: 32px; height: 32px;"></i><p class="text-sm font-semibold text-slate-500">Ketik merk material di atas untuk mulai melacak.</p></div>
+                        ` : results.length === 0 ? `
+                            <div class="text-center p-8 bg-rose-50 rounded-3xl border border-rose-100 mt-4"><i data-lucide="file-warning" class="mx-auto text-rose-300 mb-3" style="width: 32px; height: 32px;"></i><p class="text-sm font-semibold text-rose-600">Material dengan merk "${term}" tidak ditemukan di histori.</p></div>
+                        ` : `
+                            <div class="space-y-4">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Ditemukan ${results.length} histori untuk "${term}"</div>
+                                ${results.map(res => {
+                                    if (res.type === 'bulky') {
+                                        return Components.Card(`
+                                            <div class="flex justify-between items-start mb-3 border-b border-blue-100 pb-3">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="bg-blue-100 text-blue-600 p-2 rounded-lg"><i data-lucide="truck" style="width: 16px; height: 16px;"></i></div>
+                                                    <div><div class="font-black text-slate-800 text-sm">Penerimaan Bulky</div><div class="text-[9px] font-bold text-slate-500">${formatDate(res.date)} • Shift ${res.shift}</div></div>
+                                                </div>
+                                                ${Components.Badge('Kedatangan', 'primary')}
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="block text-[9px] text-slate-400 uppercase font-bold mb-0.5">Merk</span><span class="font-bold text-slate-700">${res.merk}</span></div>
+                                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="block text-[9px] text-slate-400 uppercase font-bold mb-0.5">No. Bulky</span><span class="font-bold text-slate-700">${res.noBulky}</span></div>
+                                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="block text-[9px] text-slate-400 uppercase font-bold mb-0.5">Tgl Datang</span><span class="font-bold text-blue-600">${formatDate(res.arrival)}</span></div>
+                                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="block text-[9px] text-slate-400 uppercase font-bold mb-0.5">Netto (Akhir)</span><span class="font-bold text-slate-700">${res.qty} kg ke ${res.tujuan}</span></div>
+                                            </div>
+                                        `, 'border-l-[4px] border-l-blue-500 shadow-sm p-4');
+                                    } else {
+                                        return Components.Card(`
+                                            <div class="flex justify-between items-start mb-3 border-b border-emerald-100 pb-3">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="bg-emerald-100 text-emerald-600 p-2 rounded-lg"><i data-lucide="factory" style="width: 16px; height: 16px;"></i></div>
+                                                    <div><div class="font-black text-slate-800 text-sm">Pemakaian Opname</div><div class="text-[9px] font-bold text-slate-500">${formatDate(res.date)} • Shift ${res.shift}</div></div>
+                                                </div>
+                                                ${Components.Badge('Penggunaan', 'success')}
+                                            </div>
+                                            <div class="grid grid-cols-3 gap-2 text-xs text-center">
+                                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="block text-[9px] text-slate-400 uppercase font-bold mb-0.5">Silo / Lokasi</span><span class="font-bold text-slate-700">${res.siloName}</span></div>
+                                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="block text-[9px] text-slate-400 uppercase font-bold mb-0.5">Pemasukan</span><span class="font-bold text-slate-700">${res.masuk} kg</span></div>
+                                                <div class="bg-emerald-50 p-2 rounded-lg border border-emerald-100"><span class="block text-[9px] text-emerald-600 uppercase font-bold mb-0.5">Dipakai</span><span class="font-black text-emerald-700">${res.pakai} kg</span></div>
+                                            </div>
+                                        `, 'border-l-[4px] border-l-emerald-500 shadow-sm p-4');
+                                    }
+                                }).join('')}
+                            </div>
+                        `}
+                    </div>
+                </div>`;
+            },
+
             MaintenanceForm: () => {
                 const { shift: autoShift, date: autoDate } = getCurrentShiftInfo();
                 if (!app.state.maintenanceForm) {
@@ -1343,7 +1311,7 @@
                 window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
             },
 
-            // Updated: Fix html2canvas rendering issue by adding delay & scrollY parameter
+            // Updated Fix Visual Dashboard Share: Prevent cut off and increase blur resolution
             shareDashboardImage: () => {
                 app.showGlobalMessage('Menyiapkan gambar...', false);
                 const el = document.getElementById('dashboard-capture-area');
@@ -1352,31 +1320,40 @@
                 const ignoreEls = el.querySelectorAll('.no-capture');
                 const headerEls = el.querySelectorAll('.capture-header');
                 
-                // Sembunyikan tombol, Tampilkan header surat
                 ignoreEls.forEach(e => e.style.display = 'none');
                 headerEls.forEach(e => e.style.display = 'block');
                 
-                // Beri waktu 300ms agar browser selesai memproses perubahan CSS (Repaint)
+                // Mencegah terpotong karena view di layar HP (Paksa lebar desktop sebelum capture)
+                const originalScrollY = window.scrollY;
+                window.scrollTo(0, 0); 
+                const originalWidth = el.style.width;
+                const originalMaxWidth = el.style.maxWidth;
+                el.style.width = '800px'; 
+                el.style.maxWidth = 'none';
+                
                 setTimeout(async () => {
                     try {
                         const canvas = await html2canvas(el, { 
-                            scale: 2, 
+                            scale: 2.5, // Resolusi diperbesar agar tajam
                             useCORS: true, 
                             backgroundColor: '#F4F7F9',
-                            scrollY: -window.scrollY // Mencegah terpotong jika layar sedang discroll
+                            windowWidth: 800, 
+                            scrollY: 0,
+                            x: 0,
+                            y: 0
                         });
                         const imgDataUrl = canvas.toDataURL('image/jpeg', 0.9);
                         
-                        // Kembalikan visibilitas ke semula
+                        // Kembalikan ke normal
+                        el.style.width = originalWidth;
+                        el.style.maxWidth = originalMaxWidth;
+                        window.scrollTo(0, originalScrollY);
                         ignoreEls.forEach(e => e.style.display = ''); 
                         headerEls.forEach(e => e.style.display = 'none');
                         
                         const { shift, date } = getCurrentShiftInfo();
-                        const hari = getDayName(date);
-                        const tgl = formatDate(date);
+                        let msg = `*LAPORAN VISUAL STOK MHS*\nHari/Tanggal : ${getDayName(date)}, ${formatDate(date)}\nShift berjalan : ${shift}\n\n`;
                         const s = app.state.db.lastStock;
-                        
-                        let msg = `*LAPORAN VISUAL STOK MHS*\nHari/Tanggal : ${hari}, ${tgl}\nShift berjalan : ${shift}\n\n`;
                         const formatSiloMsg = (name, type, data) => {
                             const currentBatch = data?.batches?.[0];
                             const nextBatch = data?.batches?.[1];
@@ -1394,9 +1371,8 @@
 
                         Handlers._showShareModal(imgDataUrl, msg);
                     } catch(e) {
-                        ignoreEls.forEach(e => e.style.display = '');
-                        headerEls.forEach(e => e.style.display = 'none');
-                        console.error('Canvas Error:', e);
+                        el.style.width = originalWidth; el.style.maxWidth = originalMaxWidth; window.scrollTo(0, originalScrollY);
+                        ignoreEls.forEach(e => e.style.display = ''); headerEls.forEach(e => e.style.display = 'none');
                         app.showGlobalMessage('Gagal memuat visual: ' + (e.message || 'Coba lagi'), true);
                     }
                 }, 300);
@@ -1576,9 +1552,34 @@
                 window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
             },
 
-            openRecapSearch: () => { app.state.recapFilters.searchOpen = true; app.state.recapFilters.searchTxt = ''; app.renderActiveTab(); },
-            typeRecapSearch: (val) => { app.state.recapFilters.searchTxt = val; app.renderActiveTab(); setTimeout(()=>document.getElementById('week-search-input').focus(),0); },
-            selectRecapWeek: (val) => { app.state.recapFilters.week = val; app.state.recapFilters.searchOpen = false; app.renderActiveTab(); },
+            // Updated Filter Autofocus Function
+            autoFilterWeek: (tab, val) => {
+                const filters = app.state[`${tab}Filters`];
+                filters.week = val === '' ? 'all' : val;
+                app.renderActiveTab();
+                
+                // Kembalikan fokus ke input setelah re-render
+                setTimeout(() => {
+                    const id = tab === 'recap' ? 'week-filter-recap' : 'week-filter-bulky';
+                    const el = document.getElementById(id);
+                    if(el) {
+                        el.focus();
+                        // Memastikan kursor berada di akhir angka
+                        const len = el.value.length;
+                        if(el.setSelectionRange) { el.setSelectionRange(len, len); }
+                    }
+                }, 10);
+            },
+            
+            autoFilterTrace: (val) => {
+                app.state.traceFilters.searchTxt = val;
+                app.renderActiveTab();
+                setTimeout(() => {
+                    const el = document.getElementById('trace-search');
+                    if(el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+                }, 10);
+            },
+
             changeRecapDay: (val) => { app.state.recapFilters.day = val; app.renderActiveTab(); },
 
             exportOpnamePDF: async () => {
@@ -1594,11 +1595,7 @@
                     return weekMatches && dayMatches;
                 });
 
-                if(filteredLogs.length === 0) {
-                    app.showGlobalMessage('Tidak ada data untuk diekspor.', true);
-                    return;
-                }
-
+                if(filteredLogs.length === 0) { app.showGlobalMessage('Tidak ada data untuk diekspor.', true); return; }
                 app.showGlobalMessage('Menyiapkan dokumen PDF...', false);
                 
                 const groupedByDate = {};
@@ -1606,7 +1603,6 @@
                     if(!groupedByDate[log.tanggal]) groupedByDate[log.tanggal] = [];
                     groupedByDate[log.tanggal].push(log);
                 });
-                
                 const sortedDates = Object.keys(groupedByDate).sort((a,b) => new Date(b) - new Date(a));
 
                 const { jsPDF } = window.jspdf;
@@ -1614,11 +1610,8 @@
                 const pdfWidth = pdf.internal.pageSize.getWidth(); 
                 
                 const tempContainer = document.createElement('div');
-                tempContainer.style.position = 'absolute';
-                tempContainer.style.left = '-9999px';
-                tempContainer.style.top = '0';
+                tempContainer.style.position = 'absolute'; tempContainer.style.left = '-9999px'; tempContainer.style.top = '0';
                 document.body.appendChild(tempContainer);
-                
                 let isFirstPage = true;
 
                 for (let i = 0; i < sortedDates.length; i++) {
@@ -1626,12 +1619,7 @@
                     const dayLogs = groupedByDate[date].sort((a,b) => parseInt(a.shift) - parseInt(b.shift));
                     
                     const pageDiv = document.createElement('div');
-                    pageDiv.style.width = '800px';
-                    pageDiv.style.minHeight = '1131px'; 
-                    pageDiv.style.backgroundColor = '#ffffff';
-                    pageDiv.style.padding = '40px';
-                    pageDiv.style.boxSizing = 'border-box';
-                    pageDiv.style.fontFamily = 'sans-serif';
+                    pageDiv.style.width = '800px'; pageDiv.style.minHeight = '1131px'; pageDiv.style.backgroundColor = '#ffffff'; pageDiv.style.padding = '40px'; pageDiv.style.boxSizing = 'border-box'; pageDiv.style.fontFamily = 'sans-serif';
                     
                     let html = `
                         <div style="text-align:center; border-bottom: 2px solid #cbd5e1; padding-bottom: 15px; margin-bottom: 20px;">
@@ -1643,12 +1631,9 @@
                     dayLogs.forEach(log => {
                         const getTotalM = (silo) => (Number(silo?.masukZak) || 0) + (Number(silo?.masukBulky) || 0) + (Number(silo?.masuk) || 0);
                         const rMasuk = (silo) => {
-                            const z = Number(silo?.masukZak) || 0;
-                            const b = Number(silo?.masukBulky) || 0;
-                            const oldM = Number(silo?.masuk) || 0;
+                            const z = Number(silo?.masukZak) || 0; const b = Number(silo?.masukBulky) || 0; const oldM = Number(silo?.masuk) || 0;
                             if(z > 0 || b > 0) return `${z+b} <span style="font-size:10px; color:#64748b;">(Z:${z}, B:${b})</span>`;
-                            if(oldM > 0) return oldM;
-                            return '-';
+                            if(oldM > 0) return oldM; return '-';
                         };
                         
                         html += `
@@ -1657,67 +1642,20 @@
                             <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 13px;">
                                 <thead>
                                     <tr style="background: #f8fafc; text-align: left; color: #64748b; font-size: 11px; text-transform: uppercase;">
-                                        <th style="padding: 8px; border: 1px solid #e2e8f0; width: 25%;">Item / Silo</th>
-                                        <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">Awal</th>
-                                        <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">Masuk</th>
-                                        <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; color: #2563eb;">Pakai</th>
-                                        <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">Akhir</th>
+                                        <th style="padding: 8px; border: 1px solid #e2e8f0; width: 25%;">Item / Silo</th><th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">Awal</th><th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">Masuk</th><th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; color: #2563eb;">Pakai</th><th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">Akhir</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 1 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo1?.merk || '-'}</span></td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo1?.awal || 0}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo1)}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo1?.awal, getTotalM(log.silo1), log.silo1?.akhir)}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo1?.akhir || 0}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 2 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo2?.merk || '-'}</span></td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo2?.awal || 0}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo2)}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo2?.awal, getTotalM(log.silo2), log.silo2?.akhir)}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo2?.akhir || 0}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 3 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo3?.merk || '-'}</span></td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo3?.awal || 0}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo3)}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo3?.awal, getTotalM(log.silo3), log.silo3?.akhir)}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo3?.akhir || 0}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 4 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo4?.merk || '-'}</span></td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo4?.awal || 0}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo4)}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo4?.awal, getTotalM(log.silo4), log.silo4?.akhir)}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo4?.akhir || 0}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #b45309; background: #fffbeb;">Tapioka <span style="font-size:10px; color:#d97706; font-weight:normal; display:block;">${log.tapioka?.merk || '-'}</span></td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #fffbeb;">${log.tapioka?.awal || 0}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #fffbeb;">${log.tapioka?.masuk || '-'}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb; background: #fffbeb;">${calcPakai(log.tapioka?.awal, log.tapioka?.masuk, log.tapioka?.akhir)}</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; background: #fffbeb;">${log.tapioka?.akhir || 0}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #4338ca; background: #eef2ff;">Gula <span style="font-size:10px; color:#6366f1; font-weight:normal; display:block;">${log.gula?.merk || '-'}</span></td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td>
-                                        <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; background: #eef2ff;">${log.gula?.akhir || 0}</td>
-                                    </tr>
+                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 1 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo1?.merk || '-'}</span></td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo1?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo1)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo1?.awal, getTotalM(log.silo1), log.silo1?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo1?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 2 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo2?.merk || '-'}</span></td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo2?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo2)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo2?.awal, getTotalM(log.silo2), log.silo2?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo2?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 3 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo3?.merk || '-'}</span></td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo3?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo3)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo3?.awal, getTotalM(log.silo3), log.silo3?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo3?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 4 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo4?.merk || '-'}</span></td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo4?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo4)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo4?.awal, getTotalM(log.silo4), log.silo4?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo4?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #b45309; background: #fffbeb;">Tapioka <span style="font-size:10px; color:#d97706; font-weight:normal; display:block;">${log.tapioka?.merk || '-'}</span></td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #fffbeb;">${log.tapioka?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #fffbeb;">${log.tapioka?.masuk || '-'}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb; background: #fffbeb;">${calcPakai(log.tapioka?.awal, log.tapioka?.masuk, log.tapioka?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; background: #fffbeb;">${log.tapioka?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #4338ca; background: #eef2ff;">Gula <span style="font-size:10px; color:#6366f1; font-weight:normal; display:block;">${log.gula?.merk || '-'}</span></td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; background: #eef2ff;">${log.gula?.akhir || 0}</td></tr>
                                 </tbody>
-                            </table>
-                        `;
-                        
+                            </table>`;
                         if (log.catatanOpname && log.catatanOpname.trim() !== '') {
-                            html += `
-                            <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 15px; border-radius: 8px; margin-top: 5px;">
-                                <p style="font-size: 10px; font-weight: bold; color: #1d4ed8; margin: 0 0 5px 0; text-transform: uppercase;">Catatan Opname Shift Ini:</p>
-                                <p style="font-size: 12px; color: #1e293b; margin: 0; font-style: italic;">"${log.catatanOpname}"</p>
-                            </div>
-                            `;
+                            html += `<div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 15px; border-radius: 8px; margin-top: 5px;"><p style="font-size: 10px; font-weight: bold; color: #1d4ed8; margin: 0 0 5px 0; text-transform: uppercase;">Catatan Opname Shift Ini:</p><p style="font-size: 12px; color: #1e293b; margin: 0; font-style: italic;">"${log.catatanOpname}"</p></div>`;
                         }
                         html += `</div>`;
                     });
@@ -1729,15 +1667,10 @@
                         const canvas = await html2canvas(pageDiv, { scale: 2, useCORS: true });
                         const imgData = canvas.toDataURL('image/jpeg', 1.0);
                         const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-                        
-                        if (!isFirstPage) {
-                            pdf.addPage();
-                        }
+                        if (!isFirstPage) { pdf.addPage(); }
                         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
                         isFirstPage = false;
-                    } catch(err) {
-                        console.error("Error generating page for date", date, err);
-                    }
+                    } catch(err) {}
                     
                     tempContainer.innerHTML = ''; 
                 }
@@ -1752,8 +1685,7 @@
                 const filters = app.state.recapFilters;
                 let filteredLogs = logs.filter(log => {
                     const logWeek = getWeekNumber(new Date(log.timestamp)).toString();
-                    const logDayName = getDayName(log.tanggal).toLowerCase();
-                    return (filters.week === 'all' || logWeek === filters.week.toString()) && (filters.day === 'all' || logDayName === filters.day.toLowerCase());
+                    return (filters.week === 'all' || logWeek === filters.week.toString()) && (filters.day === 'all' || getDayName(log.tanggal).toLowerCase() === filters.day.toLowerCase());
                 }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 if (filteredLogs.length === 0) { app.showGlobalMessage("Tidak ada data.", true); return; }
 
@@ -1780,14 +1712,18 @@
             showOpnameBulky: (tanggal, shift) => { app.state.selectedOpnameForBulky = { tanggal, shift }; app.renderActiveTab(); },
             closeOpnameBulkyModal: () => { app.state.selectedOpnameForBulky = null; app.renderActiveTab(); },
 
-            openBulkySearch: () => { app.state.bulkyFilters.searchOpen = true; app.state.bulkyFilters.searchTxt = ''; app.renderActiveTab(); },
-            typeBulkySearch: (val) => { app.state.bulkyFilters.searchTxt = val; app.renderActiveTab(); setTimeout(()=>document.getElementById('week-search-bulky').focus(),0); },
-            selectBulkyWeek: (val) => { app.state.bulkyFilters.week = val; app.state.bulkyFilters.searchOpen = false; app.renderActiveTab(); },
             changeBulkyDay: (val) => { app.state.bulkyFilters.day = val; app.renderActiveTab(); },
             openBulkyModal: (merk) => { app.state.selectedMerkRecap = merk; app.renderActiveTab(); },
             closeBulkyModal: () => { app.state.selectedMerkRecap = null; app.renderActiveTab(); },
             
-            // Updated: Export PDF Bulky Rekap (1 Day = 1 Page container, grouped by Shift)
+            updateBulkyTujuan: (val) => {
+                app.state.bulkyForm.tujuanSilo = val;
+                const container = document.getElementById('bf-customTujuan-container');
+                if (container) {
+                    container.className = val === 'LAINNYA / MIX' ? 'block mb-4' : 'hidden mb-4';
+                }
+            },
+
             exportBulkyPDF: async () => {
                 const logs = app.state.db.bulkyLogs || [];
                 const filters = app.state.bulkyFilters;
@@ -1795,36 +1731,22 @@
                 let filteredLogs = logs.filter(log => {
                     const logDate = new Date(log.timestamp || log.tanggalKedatangan || log.tanggal);
                     const logWeek = getWeekNumber(logDate).toString();
-                    const logDayName = getDayName(log.tanggal).toLowerCase();
-                    const weekMatches = filters.week === 'all' || logWeek === filters.week.toString();
-                    const dayMatches = filters.day === 'all' || logDayName === filters.day.toLowerCase();
-                    return weekMatches && dayMatches;
+                    return (filters.week === 'all' || logWeek === filters.week.toString()) && (filters.day === 'all' || getDayName(log.tanggal).toLowerCase() === filters.day.toLowerCase());
                 });
 
-                if(filteredLogs.length === 0) {
-                    app.showGlobalMessage('Tidak ada data bulky untuk dicetak.', true); return;
-                }
-
+                if(filteredLogs.length === 0) { app.showGlobalMessage('Tidak ada data bulky untuk dicetak.', true); return; }
                 app.showGlobalMessage('Menyiapkan PDF Bulky...', false);
 
                 const groupedByDate = {};
-                filteredLogs.forEach(log => {
-                    if(!groupedByDate[log.tanggal]) groupedByDate[log.tanggal] = [];
-                    groupedByDate[log.tanggal].push(log);
-                });
+                filteredLogs.forEach(log => { if(!groupedByDate[log.tanggal]) groupedByDate[log.tanggal] = []; groupedByDate[log.tanggal].push(log); });
                 const sortedDates = Object.keys(groupedByDate).sort((a,b) => new Date(b) - new Date(a));
 
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF('p', 'mm', 'a4');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pageHeight = pdf.internal.pageSize.getHeight();
-
+                const pdfWidth = pdf.internal.pageSize.getWidth(); const pageHeight = pdf.internal.pageSize.getHeight();
                 const tempContainer = document.createElement('div');
-                tempContainer.style.position = 'absolute';
-                tempContainer.style.left = '-9999px';
-                tempContainer.style.top = '0';
+                tempContainer.style.position = 'absolute'; tempContainer.style.left = '-9999px'; tempContainer.style.top = '0';
                 document.body.appendChild(tempContainer);
-
                 let isFirstPage = true;
 
                 for (let i = 0; i < sortedDates.length; i++) {
@@ -1832,13 +1754,7 @@
                     const dayLogs = groupedByDate[date].sort((a,b) => parseInt(a.shift) - parseInt(b.shift));
 
                     const pageDiv = document.createElement('div');
-                    pageDiv.style.width = '800px';
-                    pageDiv.style.minHeight = '1131px'; 
-                    pageDiv.style.backgroundColor = '#ffffff';
-                    pageDiv.style.padding = '40px';
-                    pageDiv.style.boxSizing = 'border-box';
-                    pageDiv.style.fontFamily = 'sans-serif';
-
+                    pageDiv.style.width = '800px'; pageDiv.style.minHeight = '1131px'; pageDiv.style.backgroundColor = '#ffffff'; pageDiv.style.padding = '40px'; pageDiv.style.boxSizing = 'border-box'; pageDiv.style.fontFamily = 'sans-serif';
                     const filterInfo = `Filter: ${filters.week === 'all' ? 'Semua Minggu' : 'Minggu Ke-'+filters.week} | ${filters.day === 'all' ? 'Semua Hari' : filters.day}`;
 
                     let html = `
@@ -1850,10 +1766,7 @@
                     `;
 
                     const groupedByShift = {};
-                    dayLogs.forEach(log => {
-                        if(!groupedByShift[log.shift]) groupedByShift[log.shift] = [];
-                        groupedByShift[log.shift].push(log);
-                    });
+                    dayLogs.forEach(log => { if(!groupedByShift[log.shift]) groupedByShift[log.shift] = []; groupedByShift[log.shift].push(log); });
 
                     Object.keys(groupedByShift).sort().forEach(shift => {
                         html += `
@@ -1862,56 +1775,24 @@
                                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;">
                                     <thead>
                                         <tr style="background: #f8fafc; text-align: left; color: #64748b; font-size: 10px; text-transform: uppercase;">
-                                            <th style="padding: 8px; border: 1px solid #e2e8f0; width: 15%;">No Kendaraan</th>
-                                            <th style="padding: 8px; border: 1px solid #e2e8f0; width: 20%;">Merk & Tujuan</th>
-                                            <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: center; width: 35%;">Timeline (Masuk/Release/Bongkar/Selesai)</th>
-                                            <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; width: 10%;">Awal (kg)</th>
-                                            <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; width: 10%;">Akhir (kg)</th>
-                                            <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; color: #e11d48; width: 10%;">Susut (kg)</th>
+                                            <th style="padding: 8px; border: 1px solid #e2e8f0; width: 15%;">No Kendaraan</th><th style="padding: 8px; border: 1px solid #e2e8f0; width: 20%;">Merk & Tujuan</th><th style="padding: 8px; border: 1px solid #e2e8f0; text-align: center; width: 35%;">Timeline</th><th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; width: 10%;">Awal (kg)</th><th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; width: 10%;">Akhir (kg)</th><th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; color: #e11d48; width: 10%;">Susut (kg)</th>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                        `;
-
+                                    </thead><tbody>`;
                         groupedByShift[shift].forEach(log => {
                             const susut = (Number(log.qtyAwal) || 0) - (Number(log.qtyAkhir) || 0);
                             html += `
                                         <tr>
                                             <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">${log.noBulky}</td>
-                                            <td style="padding: 8px; border: 1px solid #e2e8f0;">
-                                                <div style="font-weight:bold; color:#334155;">${log.merk}</div>
-                                                <div style="font-size:10px; color:#3b82f6; text-transform:uppercase; font-weight:bold; margin-top:2px;">${log.tujuanSilo || '-'}</div>
-                                            </td>
-                                            <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: center; font-size:10px; color:#64748b; white-space:nowrap;">
-                                                <span style="display:inline-block; margin-right:4px;" title="Masuk">M: <b>${formatTime(log.jamMasuk)}</b></span>|
-                                                <span style="display:inline-block; margin:0 4px;" title="Release">R: <b>${formatTime(log.jamRelease)}</b></span>|
-                                                <span style="display:inline-block; margin:0 4px;" title="Bongkar">B: <b>${formatTime(log.jamBongkar)}</b></span>|
-                                                <span style="display:inline-block; margin-left:4px;" title="Selesai">S: <b>${formatTime(log.jamSelesai)}</b></span>
-                                            </td>
+                                            <td style="padding: 8px; border: 1px solid #e2e8f0;"><div style="font-weight:bold; color:#334155;">${log.merk}</div><div style="font-size:10px; color:#3b82f6; text-transform:uppercase; font-weight:bold; margin-top:2px;">${log.tujuanSilo || '-'}</div></td>
+                                            <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: center; font-size:10px; color:#64748b; white-space:nowrap;"><span style="display:inline-block; margin-right:4px;">M: <b>${formatTime(log.jamMasuk)}</b></span>|<span style="display:inline-block; margin:0 4px;">R: <b>${formatTime(log.jamRelease)}</b></span>|<span style="display:inline-block; margin:0 4px;">B: <b>${formatTime(log.jamBongkar)}</b></span>|<span style="display:inline-block; margin-left:4px;">S: <b>${formatTime(log.jamSelesai)}</b></span></td>
                                             <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600;">${log.qtyAwal}</td>
                                             <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600;">${log.qtyAkhir}</td>
                                             <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: 900; color: #e11d48;">${susut}</td>
-                                        </tr>
-                            `;
-                            if(log.catatan && log.catatan.trim() !== '') {
-                                html += `
-                                        <tr>
-                                            <td colspan="6" style="padding: 6px 8px; border: 1px solid #e2e8f0; border-top: none; background: #fdfaf3;">
-                                                <span style="font-size: 9px; color: #94a3b8; text-transform:uppercase; font-weight:bold;">Catatan Tambahan:</span>
-                                                <span style="font-size: 11px; color: #475569; font-style: italic; margin-left: 5px;">"${log.catatan}"</span>
-                                            </td>
-                                        </tr>
-                                `;
-                            }
+                                        </tr>`;
+                            if(log.catatan && log.catatan.trim() !== '') { html += `<tr><td colspan="6" style="padding: 6px 8px; border: 1px solid #e2e8f0; border-top: none; background: #fdfaf3;"><span style="font-size: 9px; color: #94a3b8; text-transform:uppercase; font-weight:bold;">Catatan Tambahan:</span><span style="font-size: 11px; color: #475569; font-style: italic; margin-left: 5px;">"${log.catatan}"</span></td></tr>`; }
                         });
-
-                        html += `
-                                    </tbody>
-                                </table>
-                            </div>
-                        `;
+                        html += `</tbody></table></div>`;
                     });
-
                     pageDiv.innerHTML = html;
                     tempContainer.appendChild(pageDiv);
 
@@ -1919,26 +1800,14 @@
                         const canvas = await html2canvas(pageDiv, { scale: 2, useCORS: true });
                         const imgData = canvas.toDataURL('image/jpeg', 1.0);
                         const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-                        
-                        let heightLeft = imgHeight;
-                        let position = 0;
+                        let heightLeft = imgHeight; let position = 0;
 
                         if (!isFirstPage) { pdf.addPage(); }
                         pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
-                        heightLeft -= pageHeight;
-                        isFirstPage = false;
+                        heightLeft -= pageHeight; isFirstPage = false;
                         
-                        while (heightLeft >= 0) {
-                            position = heightLeft - imgHeight; 
-                            pdf.addPage();
-                            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
-                            heightLeft -= pageHeight;
-                        }
-
-                    } catch(err) {
-                        console.error("Error generating page for date", date, err);
-                    }
-
+                        while (heightLeft >= 0) { position = heightLeft - imgHeight; pdf.addPage(); pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight); heightLeft -= pageHeight; }
+                    } catch(err) {}
                     tempContainer.innerHTML = ''; 
                 }
 
@@ -1979,11 +1848,16 @@
                 const fData = app.state.bulkyForm;
                 if(!fData.noBulky || !fData.merk || !fData.tujuanSilo) return;
                 
+                const finalTujuanSilo = fData.tujuanSilo === 'LAINNYA / MIX' ? fData.customTujuanSilo : fData.tujuanSilo;
+                if(fData.tujuanSilo === 'LAINNYA / MIX' && !finalTujuanSilo) {
+                    app.showGlobalMessage('Harap ketik tujuan silo custom.', true); return;
+                }
+                
                 const btn = document.getElementById('bf-submit-btn');
                 btn.disabled = true; btn.classList.add('opacity-70', 'cursor-wait');
                 document.getElementById('bf-submit-icon').classList.add('animate-spin');
-                app.postData({ action: 'saveBulky', payload: { ...fData, id: Date.now(), timestamp: new Date(fData.tanggal).getTime() } }).catch(()=>{});
-                app.state.bulkyForm = { ...fData, noBulky: '', merk: '', tujuanSilo: '', jamMasuk: '', jamRelease: '', jamBongkar: '', jamSelesai: '', qtyAwal: '', qtyAkhir: '', catatan: '' };
+                app.postData({ action: 'saveBulky', payload: { ...fData, tujuanSilo: finalTujuanSilo, id: Date.now(), timestamp: new Date(fData.tanggal).getTime() } }).catch(()=>{});
+                app.state.bulkyForm = { ...fData, noBulky: '', merk: '', tujuanSilo: '', customTujuanSilo: '', jamMasuk: '', jamRelease: '', jamBongkar: '', jamSelesai: '', qtyAwal: '', qtyAkhir: '', catatan: '' };
                 btn.disabled = false; btn.classList.remove('opacity-70', 'cursor-wait');
                 document.getElementById('bf-submit-icon').classList.remove('animate-spin');
                 app.showSuccessModal('Berhasil!', 'Data bongkar bulky telah disimpan.');
@@ -1999,25 +1873,12 @@
                 btn.disabled = false; btn.classList.remove('opacity-70', 'cursor-wait');
                 document.getElementById('mf-submit-icon').classList.remove('animate-spin');
                 app.showSuccessModal('Berhasil!', 'Laporan kendala mesin telah disimpan.');
-            },
-            
-            shareMaintenance: (log) => {
-                let msg = `*LAPORAN KENDALA MESIN MHS*\n\nHari/Tanggal : ${getDayName(log.tanggal)}, ${formatDate(log.tanggal)}\nShift : ${log.shift} (Grup ${log.grup})\n\n*⚙️ Part Kendala:*\n${log.part}\n\n*⚠️ Detail Kendala:*\n${log.kendala}\n\n*🔧 Tindakan Perbaikan:*\n${log.perbaikan}\n`;
-                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
             }
         };
-
-        document.addEventListener('click', (e) => {
-            if (app.state.recapFilters.searchOpen && !e.target.closest('#week-search-container')) {
-                app.state.recapFilters.searchOpen = false; if(app.state.activeTab === 'recap') app.renderActiveTab();
-            }
-            if (app.state.bulkyFilters.searchOpen && !e.target.closest('#week-search-container')) {
-                app.state.bulkyFilters.searchOpen = false; if(app.state.activeTab === 'bulky') app.renderActiveTab();
-            }
-        });
 
         window.onload = () => app.render();
 
     </script>
 </body>
 </html>
+```eof
