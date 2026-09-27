@@ -549,6 +549,9 @@
                     const fillClass = color === 'blue' ? 'bg-gradient-to-t from-blue-500 to-blue-300' : 'bg-gradient-to-t from-emerald-500 to-emerald-300';
                     const borderColor = color === 'blue' ? 'border-t-blue-500' : 'border-t-emerald-500';
 
+                    // Fix error html2canvas: cegah box ukuran 0 untuk kalkulasi gradient render
+                    const fillStyle = fillPercentage > 0 ? `height: ${Math.min(100, fillPercentage)}%;` : `height: 0px; display: none;`;
+
                     let content = `
                         <div class="p-3 sm:p-4 flex-1 flex flex-col">
                             <div class="flex justify-between items-start mb-2 sm:mb-3">
@@ -565,8 +568,8 @@
                                 </div>
                                 <div class="shrink-0 flex flex-col items-center">
                                     <div class="relative w-9 sm:w-11 h-20 sm:h-24 bg-slate-200 rounded-t-xl rounded-b-md border-[2px] border-slate-300 overflow-hidden shadow-[inset_0_2px_10px_rgba(0,0,0,0.1)] flex items-end">
-                                        <div class="absolute bottom-0 left-0 right-0 ${fillClass} transition-all duration-1000 ease-in-out" style="height: ${Math.min(100, Math.max(0, fillPercentage))}%"></div>
-                                        <div class="absolute inset-0 bg-gradient-to-r from-black/20 via-white/50 to-black/20 pointer-events-none mix-blend-overlay"></div>
+                                        <div class="absolute bottom-0 left-0 right-0 ${fillClass} transition-all duration-1000 ease-in-out" style="${fillStyle}"></div>
+                                        <div class="absolute inset-0 bg-gradient-to-r from-black/20 via-white/50 to-black/20 pointer-events-none opacity-60"></div>
                                         <div class="absolute inset-0 flex flex-col justify-between py-2 opacity-20 pointer-events-none">
                                             <div class="w-full h-[1px] bg-black/50"></div><div class="w-full h-[1px] bg-black/50"></div><div class="w-full h-[1px] bg-black/50"></div>
                                         </div>
@@ -605,7 +608,7 @@
                         </div>
                         <div class="flex gap-2 no-capture">
                             <button onclick="Handlers.shareDashboardImage()" class="bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 px-3 py-2 sm:px-3 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-black flex items-center transition-all shadow-sm active:scale-95">
-                                <i data-lucide="image" class="mr-1.5" style="width: 16px; height: 16px;"></i> <span class="hidden sm:inline">Visual WA</span>
+                                <i data-lucide="image" class="mr-1.5" style="width: 16px; height: 16px;"></i> <span class="hidden sm:inline">Bagikan Visual</span>
                             </button>
                             <button onclick="Handlers.shareAwal()" class="bg-white text-blue-700 border border-blue-100 hover:bg-blue-50 px-3 py-2 sm:px-3 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-black flex items-center transition-all shadow-sm active:scale-95">
                                 <i data-lucide="share-2" class="mr-1.5" style="width: 16px; height: 16px;"></i> <span class="hidden sm:inline">Teks WA</span>
@@ -627,7 +630,7 @@
                     
                     <div class="grid grid-cols-2 gap-3 sm:gap-4 mt-2">
                         ${Components.Card(`
-                            <div class="absolute inset-0 bg-gradient-to-br from-amber-50 to-transparent opacity-80 z-0"></div>
+                            <div class="absolute inset-0 bg-gradient-to-br from-amber-50 to-amber-50/0 opacity-80 z-0"></div>
                             <div class="relative z-10 w-full flex flex-col items-center">
                                 <div class="bg-white shadow-sm border border-amber-100 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mx-auto mb-2 text-amber-600 group-hover:scale-110 transition-transform">
                                     <i data-lucide="box" stroke-width="2.5" style="width: 18px; height: 18px;"></i>
@@ -639,7 +642,7 @@
                         `, 'flex flex-col items-center justify-center text-center relative overflow-hidden group border-amber-200/60 shadow-amber-900/5 py-4 sm:py-6')}
                         
                         ${Components.Card(`
-                            <div class="absolute inset-0 bg-gradient-to-br from-indigo-50 to-transparent opacity-80 z-0"></div>
+                            <div class="absolute inset-0 bg-gradient-to-br from-indigo-50 to-indigo-50/0 opacity-80 z-0"></div>
                             <div class="relative z-10 w-full flex flex-col items-center">
                                 <div class="bg-white shadow-sm border border-indigo-100 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mx-auto mb-2 text-indigo-600 group-hover:scale-110 transition-transform">
                                     <i data-lucide="box" stroke-width="2.5" style="width: 18px; height: 18px;"></i>
@@ -1208,7 +1211,7 @@
                     `, 'bg-white border border-slate-200 shadow-sm relative overflow-visible', 'p-5 sm:p-6')}
 
                     ${app.state.user?.role === 'operator' ? Components.Card(`
-                        <!-- (Form Input Data Bulky sama seperti versi sebelumnya) -->
+                        <!-- Input Data Bulky Form -->
                         <div class="flex justify-between items-center mb-5 sm:mb-6 border-b border-slate-100 pb-3 sm:pb-4"><h2 class="text-lg sm:text-xl font-black text-slate-800 flex items-center tracking-tight"><div class="p-2 sm:p-2.5 bg-blue-100 text-blue-700 rounded-xl mr-3"><i data-lucide="truck" stroke-width="2.5" style="width: 18px; height: 18px;"></i></div>Input Data Bulky</h2></div>
                         <form onsubmit="Handlers.saveBulkyForm(event)">
                             <div class="grid grid-cols-2 gap-3 mb-2">
@@ -1340,82 +1343,121 @@
                 window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
             },
 
-            // Updated: Dashboard Image + WA Share with automatic text copying
-            shareDashboardImage: async () => {
+            // Updated: Fix html2canvas rendering issue by adding delay & scrollY parameter
+            shareDashboardImage: () => {
                 app.showGlobalMessage('Menyiapkan gambar...', false);
                 const el = document.getElementById('dashboard-capture-area');
                 if(!el) return;
                 
-                // Toggle display classes for capture
                 const ignoreEls = el.querySelectorAll('.no-capture');
                 const headerEls = el.querySelectorAll('.capture-header');
+                
+                // Sembunyikan tombol, Tampilkan header surat
                 ignoreEls.forEach(e => e.style.display = 'none');
                 headerEls.forEach(e => e.style.display = 'block');
                 
-                try {
-                    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#F4F7F9' });
-                    const imgDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                    
-                    ignoreEls.forEach(e => e.style.display = ''); 
-                    headerEls.forEach(e => e.style.display = 'none');
-                    
-                    // Generate Text Message for WA Caption
-                    const { shift, date } = getCurrentShiftInfo();
-                    const hari = getDayName(date);
-                    const tgl = formatDate(date);
-                    const s = app.state.db.lastStock;
-                    
-                    let msg = `*LAPORAN VISUAL STOK MHS*\nHari/Tanggal : ${hari}, ${tgl}\nShift berjalan : ${shift}\n\n`;
-                    const formatSiloMsg = (name, type, data) => {
-                        const currentBatch = data?.batches?.[0];
-                        const nextBatch = data?.batches?.[1];
-                        let str = `*${name} (${type} - ${data?.merk || '-'})*\nStok Total: ${data?.akhir || 0} kg\n`;
-                        if(currentBatch && currentBatch.gluten !== '-') str += `Gluten Dipakai: ${currentBatch.gluten}% (Sisa: ${currentBatch.qty} kg)\n`;
-                        if(nextBatch && nextBatch.gluten !== '-') str += `Next FIFO: ${nextBatch.gluten}%\n`;
-                        return str + `\n`;
-                    };
-                    msg += formatSiloMsg('SILO 1', 'Medium', s.silo1);
-                    msg += formatSiloMsg('SILO 2', 'Soft', s.silo2);
-                    msg += formatSiloMsg('SILO 3', 'Soft', s.silo3);
-                    msg += formatSiloMsg('SILO 4', 'Medium', s.silo4);
-                    msg += `*Mini Silo Tapioka (${s.tapioka?.merk || '-'})*: ${s.tapioka?.akhir || 0} kg\n`;
-                    msg += `*Gula Mesh 30 (${s.gula?.merk || '-'})*: ${s.gula?.akhir || 0} kg\n`;
-
-                    const textMsg = msg;
-                    
-                    // Copy to clipboard fallback to ensure they can paste it if WhatsApp native share drops the text
+                // Beri waktu 300ms agar browser selesai memproses perubahan CSS (Repaint)
+                setTimeout(async () => {
                     try {
-                        await navigator.clipboard.writeText(textMsg);
-                        app.showGlobalMessage('Teks disalin ke clipboard! Silakan Paste (Tempel) saat kirim gambar di WA.', false);
-                    } catch(err) {
-                        console.log('Clipboard fallback failed', err);
-                    }
+                        const canvas = await html2canvas(el, { 
+                            scale: 2, 
+                            useCORS: true, 
+                            backgroundColor: '#F4F7F9',
+                            scrollY: -window.scrollY // Mencegah terpotong jika layar sedang discroll
+                        });
+                        const imgDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                        
+                        // Kembalikan visibilitas ke semula
+                        ignoreEls.forEach(e => e.style.display = ''); 
+                        headerEls.forEach(e => e.style.display = 'none');
+                        
+                        const { shift, date } = getCurrentShiftInfo();
+                        const hari = getDayName(date);
+                        const tgl = formatDate(date);
+                        const s = app.state.db.lastStock;
+                        
+                        let msg = `*LAPORAN VISUAL STOK MHS*\nHari/Tanggal : ${hari}, ${tgl}\nShift berjalan : ${shift}\n\n`;
+                        const formatSiloMsg = (name, type, data) => {
+                            const currentBatch = data?.batches?.[0];
+                            const nextBatch = data?.batches?.[1];
+                            let str = `*${name} (${type} - ${data?.merk || '-'})*\nStok Total: ${data?.akhir || 0} kg\n`;
+                            if(currentBatch && currentBatch.gluten !== '-') str += `Gluten Dipakai: ${currentBatch.gluten}% (Sisa: ${currentBatch.qty} kg)\n`;
+                            if(nextBatch && nextBatch.gluten !== '-') str += `Next FIFO: ${nextBatch.gluten}%\n`;
+                            return str + `\n`;
+                        };
+                        msg += formatSiloMsg('SILO 1', 'Medium', s.silo1);
+                        msg += formatSiloMsg('SILO 2', 'Soft', s.silo2);
+                        msg += formatSiloMsg('SILO 3', 'Soft', s.silo3);
+                        msg += formatSiloMsg('SILO 4', 'Medium', s.silo4);
+                        msg += `*Mini Silo Tapioka (${s.tapioka?.merk || '-'})*: ${s.tapioka?.akhir || 0} kg\n`;
+                        msg += `*Gula Mesh 30 (${s.gula?.merk || '-'})*: ${s.gula?.akhir || 0} kg\n`;
 
-                    if (navigator.share) {
-                        canvas.toBlob(async (blob) => {
-                            const file = new File([blob], 'dashboard-status.jpg', { type: 'image/jpeg' });
-                            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                                try {
-                                    await navigator.share({ title: 'Status Stok MHS', text: textMsg, files: [file] });
-                                } catch (e) { Handlers._fallbackShareImg(imgDataUrl, textMsg); }
-                            } else { Handlers._fallbackShareImg(imgDataUrl, textMsg); }
-                        }, 'image/jpeg', 0.9);
-                    } else { Handlers._fallbackShareImg(imgDataUrl, textMsg); }
-                } catch(e) {
-                    ignoreEls.forEach(e => e.style.display = '');
-                    headerEls.forEach(e => e.style.display = 'none');
-                    app.showGlobalMessage('Gagal membuat gambar', true);
-                }
+                        Handlers._showShareModal(imgDataUrl, msg);
+                    } catch(e) {
+                        ignoreEls.forEach(e => e.style.display = '');
+                        headerEls.forEach(e => e.style.display = 'none');
+                        console.error('Canvas Error:', e);
+                        app.showGlobalMessage('Gagal memuat visual: ' + (e.message || 'Coba lagi'), true);
+                    }
+                }, 300);
             },
             
-            _fallbackShareImg: (dataUrl, textMsg) => {
-                const link = document.createElement("a");
-                link.href = dataUrl; link.download = `Dashboard_MHS_${new Date().getTime()}.jpg`;
-                document.body.appendChild(link); link.click(); document.body.removeChild(link);
-                setTimeout(() => {
-                    window.open(`https://wa.me/?text=${encodeURIComponent(textMsg)}`, '_blank');
-                    app.showSuccessModal('Berhasil', 'Gambar diunduh. WhatsApp akan dibuka, silakan attach gambar yang baru diunduh.');
-                }, 500);
+            _showShareModal: (dataUrl, textMsg) => {
+                let existing = document.getElementById('share-modal');
+                if (existing) existing.remove();
+
+                const div = document.createElement('div');
+                div.id = 'share-modal';
+                div.className = 'fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-in';
+                div.innerHTML = `
+                    <div class="bg-white rounded-[2rem] w-full max-w-md shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+                        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                            <h3 class="font-black text-slate-800 text-lg">Pratinjau Laporan</h3>
+                            <button onclick="document.getElementById('share-modal').remove()" class="p-2 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-full transition-colors"><i data-lucide="x" style="width: 18px; height: 18px;"></i></button>
+                        </div>
+                        <div class="p-4 overflow-y-auto flex-1 bg-slate-100 flex justify-center items-start">
+                            <img src="${dataUrl}" class="max-w-full h-auto rounded-xl shadow-md border border-slate-200" alt="Preview"/>
+                        </div>
+                        <div class="p-4 bg-white border-t border-slate-200 space-y-3">
+                            <div class="relative">
+                                <textarea readonly class="w-full text-[10px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-200 h-16 resize-none outline-none focus:border-blue-400 font-medium">${textMsg}</textarea>
+                                <button onclick="navigator.clipboard.writeText(this.previousElementSibling.value); app.showGlobalMessage('Teks disalin!', false);" class="absolute top-2 right-2 p-1.5 bg-white shadow-sm border border-slate-200 rounded-md text-blue-600 hover:bg-blue-50 active:scale-95 transition-all"><i data-lucide="copy" style="width:14px; height:14px;"></i></button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button id="btn-dl-img" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-3 rounded-xl transition-colors text-sm flex justify-center items-center active:scale-95">
+                                    <i data-lucide="download" class="mr-2" style="width: 16px; height: 16px;"></i> Unduh
+                                </button>
+                                <button id="btn-share-img" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-3 rounded-xl transition-colors shadow-lg shadow-blue-500/30 text-sm flex justify-center items-center active:scale-95">
+                                    <i data-lucide="share-2" class="mr-2" style="width: 16px; height: 16px;"></i> Bagikan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(div);
+                lucide.createIcons({root: div});
+
+                document.getElementById('btn-dl-img').onclick = () => {
+                    const link = document.createElement("a");
+                    link.href = dataUrl; link.download = `Dashboard_MHS_${new Date().getTime()}.jpg`;
+                    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                    app.showGlobalMessage('Gambar berhasil diunduh.', false);
+                };
+
+                document.getElementById('btn-share-img').onclick = async () => {
+                    try {
+                        const res = await fetch(dataUrl);
+                        const blob = await res.blob();
+                        const file = new File([blob], 'dashboard-status.jpg', { type: 'image/jpeg' });
+                        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                            await navigator.share({ title: 'Status Stok MHS', text: textMsg, files: [file] });
+                        } else {
+                            app.showGlobalMessage('Perangkat tidak mendukung Native Share. Silakan gunakan tombol Unduh.', true);
+                        }
+                    } catch (e) {
+                        console.error('Share failed', e);
+                    }
+                };
             },
 
             updateStockForm: (siloKey, field, value) => {
@@ -1448,7 +1490,6 @@
                 btn.disabled = true; btn.classList.add('opacity-70', 'cursor-wait');
                 document.getElementById('sf-submit-icon').classList.add('animate-spin');
 
-                // Mengacu pada referensi LOGIKA V1.txt untuk logic pembagian FIFO opname
                 const calculateNewBatches = (siloKey) => {
                     const formInput = fData[siloKey];
                     const prevSilo = db.lastStock[siloKey] || { batches: [] };
@@ -1540,12 +1581,10 @@
             selectRecapWeek: (val) => { app.state.recapFilters.week = val; app.state.recapFilters.searchOpen = false; app.renderActiveTab(); },
             changeRecapDay: (val) => { app.state.recapFilters.day = val; app.renderActiveTab(); },
 
-            // Updated: Export PDF Opname Recap (1 Day = 1 Page, properly formatted table)
             exportOpnamePDF: async () => {
                 const logs = app.state.db.opnameLogs || [];
                 const filters = app.state.recapFilters;
                 
-                // 1. Filter Logs exactly as currently viewed
                 let filteredLogs = logs.filter(log => {
                     const logDate = new Date(log.timestamp);
                     const logWeek = getWeekNumber(logDate).toString();
@@ -1562,21 +1601,18 @@
 
                 app.showGlobalMessage('Menyiapkan dokumen PDF...', false);
                 
-                // 2. Group by date (tanggal) to ensure 1 sheet per day
                 const groupedByDate = {};
                 filteredLogs.forEach(log => {
                     if(!groupedByDate[log.tanggal]) groupedByDate[log.tanggal] = [];
                     groupedByDate[log.tanggal].push(log);
                 });
                 
-                // Sort dates descending (Newest first)
                 const sortedDates = Object.keys(groupedByDate).sort((a,b) => new Date(b) - new Date(a));
 
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF('p', 'mm', 'a4');
-                const pdfWidth = pdf.internal.pageSize.getWidth(); // ~210mm
+                const pdfWidth = pdf.internal.pageSize.getWidth(); 
                 
-                // Hidden container for HTML rendering
                 const tempContainer = document.createElement('div');
                 tempContainer.style.position = 'absolute';
                 tempContainer.style.left = '-9999px';
@@ -1587,19 +1623,16 @@
 
                 for (let i = 0; i < sortedDates.length; i++) {
                     const date = sortedDates[i];
-                    // Sort shifts within the day ascending (Shift 1, then 2, then 3)
                     const dayLogs = groupedByDate[date].sort((a,b) => parseInt(a.shift) - parseInt(b.shift));
                     
-                    // Create an A4 proportionate container div (width: 800px, min-height handles scale)
                     const pageDiv = document.createElement('div');
                     pageDiv.style.width = '800px';
-                    pageDiv.style.minHeight = '1131px'; // A4 Aspect Ratio Height
+                    pageDiv.style.minHeight = '1131px'; 
                     pageDiv.style.backgroundColor = '#ffffff';
                     pageDiv.style.padding = '40px';
                     pageDiv.style.boxSizing = 'border-box';
                     pageDiv.style.fontFamily = 'sans-serif';
                     
-                    // Header of the page
                     let html = `
                         <div style="text-align:center; border-bottom: 2px solid #cbd5e1; padding-bottom: 15px; margin-bottom: 20px;">
                             <h1 style="font-size: 24px; font-weight: 900; color: #1e293b; margin: 0 0 5px 0;">Laporan Rekapitulasi Opname MHS</h1>
@@ -1607,7 +1640,6 @@
                         </div>
                     `;
                     
-                    // Render Each Shift's Table
                     dayLogs.forEach(log => {
                         const getTotalM = (silo) => (Number(silo?.masukZak) || 0) + (Number(silo?.masukBulky) || 0) + (Number(silo?.masuk) || 0);
                         const rMasuk = (silo) => {
@@ -1693,11 +1725,10 @@
                     pageDiv.innerHTML = html;
                     tempContainer.appendChild(pageDiv);
                     
-                    // 3. Convert generated clean HTML directly to PDF page
                     try {
                         const canvas = await html2canvas(pageDiv, { scale: 2, useCORS: true });
                         const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                        const imgHeight = (canvas.height * pdfWidth) / canvas.width; // Maintains perfect aspect ratio
+                        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
                         
                         if (!isFirstPage) {
                             pdf.addPage();
@@ -1708,7 +1739,7 @@
                         console.error("Error generating page for date", date, err);
                     }
                     
-                    tempContainer.innerHTML = ''; // Clear for the next date page loop
+                    tempContainer.innerHTML = ''; 
                 }
                 
                 document.body.removeChild(tempContainer);
@@ -1756,89 +1787,164 @@
             openBulkyModal: (merk) => { app.state.selectedMerkRecap = merk; app.renderActiveTab(); },
             closeBulkyModal: () => { app.state.selectedMerkRecap = null; app.renderActiveTab(); },
             
+            // Updated: Export PDF Bulky Rekap (1 Day = 1 Page container, grouped by Shift)
             exportBulkyPDF: async () => {
-                const recapData = window.currentBulkyRecapData || {};
-                if(Object.keys(recapData).length === 0) {
+                const logs = app.state.db.bulkyLogs || [];
+                const filters = app.state.bulkyFilters;
+
+                let filteredLogs = logs.filter(log => {
+                    const logDate = new Date(log.timestamp || log.tanggalKedatangan || log.tanggal);
+                    const logWeek = getWeekNumber(logDate).toString();
+                    const logDayName = getDayName(log.tanggal).toLowerCase();
+                    const weekMatches = filters.week === 'all' || logWeek === filters.week.toString();
+                    const dayMatches = filters.day === 'all' || logDayName === filters.day.toLowerCase();
+                    return weekMatches && dayMatches;
+                });
+
+                if(filteredLogs.length === 0) {
                     app.showGlobalMessage('Tidak ada data bulky untuk dicetak.', true); return;
                 }
-                
+
                 app.showGlobalMessage('Menyiapkan PDF Bulky...', false);
-                
-                const tempDiv = document.createElement('div');
-                tempDiv.style.position = 'absolute'; tempDiv.style.left = '-9999px'; tempDiv.style.top = '0';
-                tempDiv.style.width = '800px'; tempDiv.style.backgroundColor = '#F4F7F9'; tempDiv.style.padding = '30px';
-                
-                const filterInfo = `Filter: ${window.currentBulkyFilters?.week === 'all' ? 'Semua Minggu' : 'Minggu Ke-'+window.currentBulkyFilters?.week} | ${window.currentBulkyFilters?.day === 'all' ? 'Semua Hari' : window.currentBulkyFilters?.day}`;
-                
-                let html = `<h1 style="font-size:28px; font-weight:900; color:#1e293b; margin-bottom:5px; font-family:sans-serif;">Rincian Rekap Bulky MHS</h1>`;
-                html += `<p style="margin-bottom:30px; font-size:14px; font-weight:bold; color:#64748b; font-family:sans-serif;">${filterInfo} (Dicetak: ${new Date().toLocaleString('id-ID')})</p>`;
-                
-                Object.keys(recapData).forEach(merk => {
-                    html += `<div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:20px; margin-bottom:20px; font-family:sans-serif;">`;
-                    html += `<h2 style="font-size:22px; font-weight:900; color:#334155; margin-bottom:15px; border-bottom:2px solid #f1f5f9; padding-bottom:10px;">Merk: ${merk} <span style="font-size:12px; font-weight:bold; color:#94a3b8; background:#f8fafc; padding:4px 8px; border-radius:6px; float:right;">Total: ${recapData[merk].count} Kendaraan</span></h2>`;
-                    
-                    recapData[merk].logs.forEach(log => {
-                        html += `
-                        <div style="background:#fff; border:1px solid #cbd5e1; border-radius:12px; padding:16px; margin-bottom:16px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                                <div>
-                                    <div style="font-weight:900; font-size:18px; color:#1e293b;">${log.noBulky}</div>
-                                    <div style="font-size:12px; font-weight:bold; color:#64748b;">Bongkar: ${formatDate(log.tanggal)} • Shift ${log.shift}</div>
-                                    ${log.tanggalKedatangan ? `<div style="font-size:12px; font-weight:bold; color:#3b82f6; margin-top:2px;">Datang: ${formatDate(log.tanggalKedatangan)}</div>` : ''}
-                                </div>
-                                <span style="background:#eff6ff; color:#1d4ed8; border:1px solid #dbeafe; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:bold; text-transform:uppercase; height:fit-content;">${log.tujuanSilo || 'Tidak ada data'}</span>
-                            </div>
-                            
-                            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; text-align:center; background:#f8fafc; border-radius:12px; padding:12px; margin-bottom:12px; border:1px solid #e2e8f0;">
-                                <div><div style="font-size:10px; color:#94a3b8; font-weight:bold; text-transform:uppercase; margin-bottom:4px;">Masuk</div><div style="font-weight:600; font-size:14px; color:#334155;">${formatTime(log.jamMasuk)}</div></div>
-                                <div><div style="font-size:10px; color:#94a3b8; font-weight:bold; text-transform:uppercase; margin-bottom:4px;">Release</div><div style="font-weight:600; font-size:14px; color:#334155;">${formatTime(log.jamRelease)}</div></div>
-                                <div><div style="font-size:10px; color:#94a3b8; font-weight:bold; text-transform:uppercase; margin-bottom:4px;">Bongkar</div><div style="font-weight:600; font-size:14px; color:#334155;">${formatTime(log.jamBongkar)}</div></div>
-                                <div><div style="font-size:10px; color:#94a3b8; font-weight:bold; text-transform:uppercase; margin-bottom:4px;">Selesai</div><div style="font-weight:600; font-size:14px; color:#334155;">${formatTime(log.jamSelesai)}</div></div>
-                            </div>
-                            
-                            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center; border-top:1px solid #e2e8f0; padding-top:12px;">
-                                <div><div style="font-size:11px; color:#94a3b8; font-weight:bold; text-transform:uppercase;">Awal</div><div style="font-weight:900; font-size:16px; color:#334155;">${log.qtyAwal} <span style="font-size:11px; opacity:0.5; font-weight:500;">kg</span></div></div>
-                                <div style="border-left:1px solid #e2e8f0; border-right:1px solid #e2e8f0;"><div style="font-size:11px; color:#94a3b8; font-weight:bold; text-transform:uppercase;">Akhir</div><div style="font-weight:900; font-size:16px; color:#334155;">${log.qtyAkhir} <span style="font-size:11px; opacity:0.5; font-weight:500;">kg</span></div></div>
-                                <div><div style="font-size:11px; color:#fb7185; font-weight:bold; text-transform:uppercase;">Susut</div><div style="font-weight:900; font-size:16px; color:#e11d48;">${Number(log.qtyAwal) - Number(log.qtyAkhir)} <span style="font-size:11px; opacity:0.5; font-weight:500;">kg</span></div></div>
-                            </div>
-                            
-                            ${log.catatan ? `<div style="margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0;"><p style="font-size:10px; color:#64748b; font-weight:bold; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Catatan</p><p style="font-size:13px; font-weight:600; color:#334155; font-style:italic;">"${log.catatan}"</p></div>` : ''}
-                        </div>`;
-                    });
-                    html += `</div>`;
+
+                const groupedByDate = {};
+                filteredLogs.forEach(log => {
+                    if(!groupedByDate[log.tanggal]) groupedByDate[log.tanggal] = [];
+                    groupedByDate[log.tanggal].push(log);
                 });
-                
-                tempDiv.innerHTML = html;
-                document.body.appendChild(tempDiv);
-                
-                try {
-                    const canvas = await html2canvas(tempDiv, { scale: 2, useCORS: true });
-                    const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                    const { jsPDF } = window.jspdf;
-                    const pdf = new jsPDF('p', 'mm', 'a4');
-                    const pdfWidth = pdf.internal.pageSize.getWidth();
-                    const pageHeight = pdf.internal.pageSize.getHeight();
-                    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-                    
-                    let heightLeft = imgHeight;
-                    let position = 0;
-                    
-                    pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
-                    heightLeft -= pageHeight;
-                    
-                    while (heightLeft >= 0) {
-                        position = heightLeft - imgHeight;
-                        pdf.addPage();
+                const sortedDates = Object.keys(groupedByDate).sort((a,b) => new Date(b) - new Date(a));
+
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+
+                const tempContainer = document.createElement('div');
+                tempContainer.style.position = 'absolute';
+                tempContainer.style.left = '-9999px';
+                tempContainer.style.top = '0';
+                document.body.appendChild(tempContainer);
+
+                let isFirstPage = true;
+
+                for (let i = 0; i < sortedDates.length; i++) {
+                    const date = sortedDates[i];
+                    const dayLogs = groupedByDate[date].sort((a,b) => parseInt(a.shift) - parseInt(b.shift));
+
+                    const pageDiv = document.createElement('div');
+                    pageDiv.style.width = '800px';
+                    pageDiv.style.minHeight = '1131px'; 
+                    pageDiv.style.backgroundColor = '#ffffff';
+                    pageDiv.style.padding = '40px';
+                    pageDiv.style.boxSizing = 'border-box';
+                    pageDiv.style.fontFamily = 'sans-serif';
+
+                    const filterInfo = `Filter: ${filters.week === 'all' ? 'Semua Minggu' : 'Minggu Ke-'+filters.week} | ${filters.day === 'all' ? 'Semua Hari' : filters.day}`;
+
+                    let html = `
+                        <div style="text-align:center; border-bottom: 2px solid #cbd5e1; padding-bottom: 15px; margin-bottom: 20px;">
+                            <h1 style="font-size: 24px; font-weight: 900; color: #1e293b; margin: 0 0 5px 0;">Laporan Rekapitulasi Bulky MHS</h1>
+                            <p style="font-size: 14px; color: #64748b; margin: 0; font-weight: bold;">Hari/Tanggal: ${getDayName(date)}, ${formatDate(date)}</p>
+                            <p style="font-size: 10px; color: #94a3b8; margin-top: 5px;">${filterInfo} (Dicetak: ${new Date().toLocaleString('id-ID')})</p>
+                        </div>
+                    `;
+
+                    const groupedByShift = {};
+                    dayLogs.forEach(log => {
+                        if(!groupedByShift[log.shift]) groupedByShift[log.shift] = [];
+                        groupedByShift[log.shift].push(log);
+                    });
+
+                    Object.keys(groupedByShift).sort().forEach(shift => {
+                        html += `
+                            <div style="margin-bottom: 20px;">
+                                <h3 style="font-size: 16px; font-weight: 800; color: #334155; margin: 0 0 10px 0; background: #f1f5f9; padding: 8px 12px; border-radius: 6px; display: inline-block;">Shift ${shift}</h3>
+                                <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;">
+                                    <thead>
+                                        <tr style="background: #f8fafc; text-align: left; color: #64748b; font-size: 10px; text-transform: uppercase;">
+                                            <th style="padding: 8px; border: 1px solid #e2e8f0; width: 15%;">No Kendaraan</th>
+                                            <th style="padding: 8px; border: 1px solid #e2e8f0; width: 20%;">Merk & Tujuan</th>
+                                            <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: center; width: 35%;">Timeline (Masuk/Release/Bongkar/Selesai)</th>
+                                            <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; width: 10%;">Awal (kg)</th>
+                                            <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; width: 10%;">Akhir (kg)</th>
+                                            <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; color: #e11d48; width: 10%;">Susut (kg)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+
+                        groupedByShift[shift].forEach(log => {
+                            const susut = (Number(log.qtyAwal) || 0) - (Number(log.qtyAkhir) || 0);
+                            html += `
+                                        <tr>
+                                            <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">${log.noBulky}</td>
+                                            <td style="padding: 8px; border: 1px solid #e2e8f0;">
+                                                <div style="font-weight:bold; color:#334155;">${log.merk}</div>
+                                                <div style="font-size:10px; color:#3b82f6; text-transform:uppercase; font-weight:bold; margin-top:2px;">${log.tujuanSilo || '-'}</div>
+                                            </td>
+                                            <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: center; font-size:10px; color:#64748b; white-space:nowrap;">
+                                                <span style="display:inline-block; margin-right:4px;" title="Masuk">M: <b>${formatTime(log.jamMasuk)}</b></span>|
+                                                <span style="display:inline-block; margin:0 4px;" title="Release">R: <b>${formatTime(log.jamRelease)}</b></span>|
+                                                <span style="display:inline-block; margin:0 4px;" title="Bongkar">B: <b>${formatTime(log.jamBongkar)}</b></span>|
+                                                <span style="display:inline-block; margin-left:4px;" title="Selesai">S: <b>${formatTime(log.jamSelesai)}</b></span>
+                                            </td>
+                                            <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600;">${log.qtyAwal}</td>
+                                            <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600;">${log.qtyAkhir}</td>
+                                            <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: 900; color: #e11d48;">${susut}</td>
+                                        </tr>
+                            `;
+                            if(log.catatan && log.catatan.trim() !== '') {
+                                html += `
+                                        <tr>
+                                            <td colspan="6" style="padding: 6px 8px; border: 1px solid #e2e8f0; border-top: none; background: #fdfaf3;">
+                                                <span style="font-size: 9px; color: #94a3b8; text-transform:uppercase; font-weight:bold;">Catatan Tambahan:</span>
+                                                <span style="font-size: 11px; color: #475569; font-style: italic; margin-left: 5px;">"${log.catatan}"</span>
+                                            </td>
+                                        </tr>
+                                `;
+                            }
+                        });
+
+                        html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    });
+
+                    pageDiv.innerHTML = html;
+                    tempContainer.appendChild(pageDiv);
+
+                    try {
+                        const canvas = await html2canvas(pageDiv, { scale: 2, useCORS: true });
+                        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                        
+                        let heightLeft = imgHeight;
+                        let position = 0;
+
+                        if (!isFirstPage) { pdf.addPage(); }
                         pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
                         heightLeft -= pageHeight;
+                        isFirstPage = false;
+                        
+                        while (heightLeft >= 0) {
+                            position = heightLeft - imgHeight; 
+                            pdf.addPage();
+                            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+                            heightLeft -= pageHeight;
+                        }
+
+                    } catch(err) {
+                        console.error("Error generating page for date", date, err);
                     }
-                    pdf.save(`Rincian_Bulky_MHS_${new Date().getTime()}.pdf`);
-                    app.showSuccessModal('Selesai', 'PDF Bulky berhasil diunduh.');
-                } catch(e) {
-                    app.showGlobalMessage('Gagal membuat PDF', true);
-                } finally {
-                    document.body.removeChild(tempDiv);
+
+                    tempContainer.innerHTML = ''; 
                 }
+
+                document.body.removeChild(tempContainer);
+                pdf.save(`Rekap_Bulky_MHS_${new Date().getTime()}.pdf`);
+                app.showSuccessModal('Selesai', 'PDF Bulky berhasil diunduh. (Format Per Hari/Shift)');
             },
 
             exportBulkyExcel: () => {
