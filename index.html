@@ -79,11 +79,20 @@
         };
 
         const getWeekNumber = (date) => {
+            if (!date) return 0;
             const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
             const dayNum = d.getUTCDay() || 7;
             d.setUTCDate(d.getUTCDate() + 4 - dayNum);
             const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
             return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+        };
+
+        const getRecentWeeks = (logs = []) => {
+            const weeks = new Set();
+            logs.forEach(l => {
+                if(l.tanggal || l.timestamp) weeks.add(getWeekNumber(new Date(l.tanggal || l.timestamp)));
+            });
+            return Array.from(weeks).sort((a,b)=>b-a).slice(0,3);
         };
 
         const getCurrentShiftInfo = () => {
@@ -97,7 +106,7 @@
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
-            return { shift, date: `${year}-${month}-${day}` };
+            return { shift, date: `${year}-${month}-${day}`, month: `${year}-${month}` };
         };
 
         const getDayName = (dateStr) => {
@@ -108,6 +117,12 @@
         const formatDate = (dateStr) => {
             if (!dateStr) return '';
             return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        };
+        
+        const formatDateToYYYYMMDD = (dateStr) => {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         };
 
         const formatTime = (timeStr) => {
@@ -129,20 +144,22 @@
             return p > 0 ? p : 0;
         };
 
+        const cachedDB = localStorage.getItem('mhs_db_cache');
+        const cachedUser = localStorage.getItem('mhs_user_cache');
+
         const app = {
             state: {
-                user: null, 
+                user: cachedUser ? JSON.parse(cachedUser) : null, 
                 activeTab: 'dashboard',
                 isAuthLoading: false,
                 loginError: '',
                 globalMessage: null,
                 isSyncing: false,
-                db: { lastStock: null, opnameLogs: [], bulkyLogs: [], maintenanceLogs: [] },
+                db: cachedDB ? JSON.parse(cachedDB) : { lastStock: null, opnameLogs: [], bulkyLogs: [], maintenanceLogs: [] },
                 stockForm: null,
                 recapFilters: { week: 'all', day: 'all' },
-                bulkyFilters: { week: getWeekNumber(new Date()).toString(), day: 'all' },
+                bulkyFilters: { week: 'all', day: 'all' },
                 traceFilters: { searchTxt: '' },
-                selectedOpnameForBulky: null, 
                 bulkyForm: null,
                 maintenanceForm: null,
                 selectedMerkRecap: null 
@@ -210,9 +227,7 @@
                 if (this.state.user?.role === 'viewer') tabs = ['dashboard', 'recap', 'bulky', 'trace', 'maintenance'];
                 const activeIndex = tabs.indexOf(this.state.activeTab);
                 
-                // Kalkulasi lebar dan posisi dinamis berdasarkan scroll container
-                const navItems = document.querySelectorAll('.nav-item');
-                if(navItems.length > 0 && navItems[activeIndex]) {
+                if(navItems = document.querySelectorAll('.nav-item'), navItems.length > 0 && navItems[activeIndex]) {
                     const activeEl = navItems[activeIndex];
                     indicator.style.width = `${activeEl.offsetWidth - 16}px`;
                     indicator.style.left = `${activeEl.offsetLeft + 8}px`;
@@ -275,6 +290,7 @@
                     const data = await res.json();
                     if (data.success) {
                         this.state.user = { username: data.username, role: data.role };
+                        localStorage.setItem('mhs_user_cache', JSON.stringify(this.state.user));
                         this.fetchData();
                         this.render();
                     } else {
@@ -287,7 +303,11 @@
                 if(!this.state.user) this.render();
             },
 
-            logout: function() { this.state.user = null; this.render(); },
+            logout: function() { 
+                this.state.user = null; 
+                localStorage.removeItem('mhs_user_cache');
+                this.render(); 
+            },
 
             fetchData: async function() {
                 this.state.isSyncing = true;
@@ -296,6 +316,7 @@
                     const res = await fetch(`${API_URL}?action=getData`);
                     const data = await res.json();
                     this.state.db = data;
+                    localStorage.setItem('mhs_db_cache', JSON.stringify(data));
                     if(['dashboard', 'recap', 'maintenance', 'bulky', 'trace'].includes(this.state.activeTab)) {
                          this.renderActiveTab();
                     }
@@ -522,7 +543,20 @@
 
         const Views = {
             Dashboard: () => {
-                if (!app.state.db.lastStock) return `<div class="text-center py-10">Memuat data...</div>`;
+                if (!app.state.db.lastStock) {
+                    return `
+                    <div class="max-w-2xl mx-auto space-y-5 animate-pulse p-4">
+                        <div class="flex justify-between items-end mb-4">
+                            <div><div class="h-6 bg-slate-200/60 rounded-md w-32 mb-2"></div><div class="h-4 bg-slate-200/60 rounded-md w-48"></div></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                            <div class="bg-slate-200/50 rounded-[1.5rem] h-48 border border-slate-200/60"></div>
+                            <div class="bg-slate-200/50 rounded-[1.5rem] h-48 border border-slate-200/60"></div>
+                            <div class="bg-slate-200/50 rounded-[1.5rem] h-48 border border-slate-200/60"></div>
+                            <div class="bg-slate-200/50 rounded-[1.5rem] h-48 border border-slate-200/60"></div>
+                        </div>
+                    </div>`;
+                }
                 const db = app.state.db;
 
                 const StockCardHTML = (title, type, data, color) => {
@@ -536,7 +570,7 @@
                     const fillStyle = fillPercentage > 0 ? `height: ${Math.min(100, fillPercentage)}%;` : `height: 0px; display: none;`;
 
                     let content = `
-                        <div class="p-3 sm:p-4 flex-1 flex flex-col">
+                        <div class="p-3 sm:p-4 flex-1 flex flex-col dashboard-card-inner">
                             <div class="flex justify-between items-start mb-2 sm:mb-3">
                                 <div class="min-w-0 pr-1">
                                     <span class="font-black text-sm sm:text-base text-slate-800 block leading-none mb-1 truncate">${title}</span>
@@ -550,19 +584,19 @@
                                     <span class="text-[9px] sm:text-[10px] font-bold text-slate-400 mt-0.5 block">kg</span>
                                 </div>
                                 <div class="shrink-0 flex flex-col items-center">
-                                    <div class="relative w-9 sm:w-11 h-20 sm:h-24 bg-slate-200 rounded-t-xl rounded-b-md border-[2px] border-slate-300 overflow-hidden shadow-[inset_0_2px_10px_rgba(0,0,0,0.1)] flex items-end">
+                                    <div class="relative w-9 sm:w-11 h-20 sm:h-24 bg-slate-200 rounded-t-xl rounded-b-md border-[2px] border-slate-300 overflow-hidden shadow-[inset_0_2px_10px_rgba(0,0,0,0.1)] flex items-end silo-glass">
                                         <div class="absolute bottom-0 left-0 right-0 ${fillClass} transition-all duration-1000 ease-in-out" style="${fillStyle}"></div>
                                         <div class="absolute inset-0 bg-gradient-to-r from-black/20 via-white/50 to-black/20 pointer-events-none opacity-60"></div>
                                         <div class="absolute inset-0 flex flex-col justify-between py-2 opacity-20 pointer-events-none">
                                             <div class="w-full h-[1px] bg-black/50"></div><div class="w-full h-[1px] bg-black/50"></div><div class="w-full h-[1px] bg-black/50"></div>
                                         </div>
                                     </div>
-                                    <div class="mt-1.5 bg-white px-1.5 py-0.5 rounded shadow-sm border border-slate-100">
+                                    <div class="mt-1.5 bg-white px-1.5 py-0.5 rounded shadow-sm border border-slate-100 badge-solid">
                                         <span class="text-[8px] font-black text-slate-600">${fillPercentage > 0 && fillPercentage < 1 ? fillPercentage.toFixed(1) : Math.round(fillPercentage)}%</span>
                                     </div>
                                 </div>
                             </div>
-                            <div class="bg-slate-50 rounded-lg p-2 border border-slate-200/60 shadow-inner mt-auto space-y-1">
+                            <div class="bg-slate-50 rounded-lg p-2 border border-slate-200/60 shadow-inner mt-auto space-y-1 sub-card-solid">
                                 <div class="flex justify-between items-center gap-1">
                                     <span class="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase">Gluten</span>
                                     <span class="text-[9px] sm:text-[10px] font-black text-slate-800 truncate">${currentBatch.gluten !== '-' ? `${currentBatch.gluten}%` : '-'}</span>
@@ -571,15 +605,15 @@
                                     <span class="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase">Sisa</span>
                                     <span class="text-[9px] sm:text-[10px] font-black text-slate-600 truncate">${currentBatch.qty} kg</span>
                                 </div>
-                                <div class="h-[1px] bg-slate-200 w-full my-0.5"></div>
+                                <div class="h-[1px] bg-slate-200 w-full my-0.5 line-solid"></div>
                                 <div class="flex justify-between items-center gap-1">
                                     <span class="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase">Next</span>
-                                    <span class="text-[8px] sm:text-[9px] font-black text-slate-600 bg-slate-200/50 px-1 rounded truncate">${nextBatch ? `${nextBatch.gluten}%` : '-'}</span>
+                                    <span class="text-[8px] sm:text-[9px] font-black text-slate-600 bg-slate-200/50 px-1 rounded truncate label-solid">${nextBatch ? `${nextBatch.gluten}%` : '-'}</span>
                                 </div>
                             </div>
                         </div>
                     `;
-                    return Components.Card(content, `border-t-[4px] ${borderColor} flex flex-col h-full overflow-hidden shadow-sm`, 'p-0');
+                    return Components.Card(content, `border-t-[4px] ${borderColor} flex flex-col h-full overflow-hidden shadow-sm dashboard-card`, 'p-0');
                 };
 
                 return `
@@ -613,28 +647,28 @@
                     
                     <div class="grid grid-cols-2 gap-3 sm:gap-4 mt-2">
                         ${Components.Card(`
-                            <div class="absolute inset-0 bg-gradient-to-br from-amber-50 to-amber-50/0 opacity-80 z-0"></div>
+                            <div class="absolute inset-0 bg-gradient-to-br from-amber-50 to-amber-50/0 opacity-80 z-0 capture-bg-fix"></div>
                             <div class="relative z-10 w-full flex flex-col items-center">
-                                <div class="bg-white shadow-sm border border-amber-100 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mx-auto mb-2 text-amber-600 group-hover:scale-110 transition-transform">
+                                <div class="bg-white shadow-sm border border-amber-100 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mx-auto mb-2 text-amber-600 group-hover:scale-110 transition-transform badge-solid">
                                     <i data-lucide="box" stroke-width="2.5" style="width: 18px; height: 18px;"></i>
                                 </div>
-                                <span class="text-amber-700/70 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest block mb-1">Tapioka</span>
+                                <span class="text-amber-700/70 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest block mb-1 font-fix">Tapioka</span>
                                 ${Components.Badge(db.lastStock.tapioka?.merk || '-', 'warning')}
-                                <span class="text-xl sm:text-2xl font-black text-slate-800 mt-2">${db.lastStock.tapioka?.akhir || 0} <span class="text-[10px] sm:text-xs text-slate-400 font-bold">kg</span></span>
+                                <span class="text-xl sm:text-2xl font-black text-slate-800 mt-2 font-fix">${db.lastStock.tapioka?.akhir || 0} <span class="text-[10px] sm:text-xs text-slate-400 font-bold">kg</span></span>
                             </div>
-                        `, 'flex flex-col items-center justify-center text-center relative overflow-hidden group border-amber-200/60 shadow-amber-900/5 py-4 sm:py-6')}
+                        `, 'flex flex-col items-center justify-center text-center relative overflow-hidden group border-amber-200/60 shadow-amber-900/5 py-4 sm:py-6 dashboard-card')}
                         
                         ${Components.Card(`
-                            <div class="absolute inset-0 bg-gradient-to-br from-indigo-50 to-indigo-50/0 opacity-80 z-0"></div>
+                            <div class="absolute inset-0 bg-gradient-to-br from-indigo-50 to-indigo-50/0 opacity-80 z-0 capture-bg-fix"></div>
                             <div class="relative z-10 w-full flex flex-col items-center">
-                                <div class="bg-white shadow-sm border border-indigo-100 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mx-auto mb-2 text-indigo-600 group-hover:scale-110 transition-transform">
+                                <div class="bg-white shadow-sm border border-indigo-100 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mx-auto mb-2 text-indigo-600 group-hover:scale-110 transition-transform badge-solid">
                                     <i data-lucide="box" stroke-width="2.5" style="width: 18px; height: 18px;"></i>
                                 </div>
-                                <span class="text-indigo-700/70 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest block mb-1">Gula Mesh 30</span>
+                                <span class="text-indigo-700/70 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest block mb-1 font-fix">Gula Mesh 30</span>
                                 ${Components.Badge(db.lastStock.gula?.merk || '-', 'slate')}
-                                <span class="text-xl sm:text-2xl font-black text-slate-800 mt-2">${db.lastStock.gula?.akhir || 0} <span class="text-[10px] sm:text-xs text-slate-400 font-bold">kg</span></span>
+                                <span class="text-xl sm:text-2xl font-black text-slate-800 mt-2 font-fix">${db.lastStock.gula?.akhir || 0} <span class="text-[10px] sm:text-xs text-slate-400 font-bold">kg</span></span>
                             </div>
-                        `, 'flex flex-col items-center justify-center text-center relative overflow-hidden group border-indigo-200/60 shadow-indigo-900/5 py-4 sm:py-6')}
+                        `, 'flex flex-col items-center justify-center text-center relative overflow-hidden group border-indigo-200/60 shadow-indigo-900/5 py-4 sm:py-6 dashboard-card')}
                     </div>
                 </div>`;
             },
@@ -791,12 +825,13 @@
             OpnameRecap: () => {
                 const logs = app.state.db.opnameLogs || [];
                 const filters = app.state.recapFilters;
+                const availableWeeks = getRecentWeeks(logs);
                 
                 let filteredLogs = logs.filter(log => {
                     const logDate = new Date(log.timestamp);
                     const logWeek = getWeekNumber(logDate).toString();
                     const logDayName = getDayName(log.tanggal).toLowerCase();
-                    const weekMatches = filters.week === 'all' || logWeek === filters.week.toString();
+                    const weekMatches = filters.week === 'Semua' || filters.week === 'all' || logWeek === filters.week.toString();
                     const dayMatches = filters.day === 'all' || logDayName === filters.day.toLowerCase();
                     return weekMatches && dayMatches;
                 }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -940,7 +975,11 @@
                         <div class="grid grid-cols-2 gap-3 no-capture">
                             <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center relative">
                                 <i data-lucide="filter" class="text-blue-500 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
-                                <input type="number" id="week-filter-recap" min="1" max="52" class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-slate-400" placeholder="Ketik Minggu..." value="${filters.week === 'all' ? '' : filters.week}" oninput="Handlers.autoFilterWeek('recap', this.value)" />
+                                <input list="weeks-recap" id="week-filter-recap" class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-slate-400" placeholder="Ketik/Pilih Minggu..." value="${filters.week === 'all' || filters.week === 'Semua' ? 'Semua' : filters.week}" onchange="Handlers.autoFilterWeek('recap', this.value)" />
+                                <datalist id="weeks-recap">
+                                    <option value="Semua">Semua Minggu</option>
+                                    ${availableWeeks.map(w => `<option value="${w}">Minggu Ke-${w}</option>`).join('')}
+                                </datalist>
                             </div>
                             <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center">
                                 <i data-lucide="calendar-days" class="text-blue-500 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
@@ -968,13 +1007,14 @@
                 const fData = app.state.bulkyForm;
                 const filters = app.state.bulkyFilters;
                 const logs = app.state.db.bulkyLogs || [];
+                const availableWeeks = getRecentWeeks(logs);
 
                 const recapData = {};
                 logs.forEach(log => {
                     const logDate = new Date(log.timestamp);
                     const logWeek = getWeekNumber(logDate).toString();
                     const logDay = getDayName(log.tanggal).toLowerCase();
-                    const weekMatches = filters.week === 'all' || logWeek === filters.week.toString();
+                    const weekMatches = filters.week === 'Semua' || filters.week === 'all' || logWeek === filters.week.toString();
                     const dayMatches = filters.day === 'all' || logDay === filters.day.toLowerCase();
                     if (weekMatches && dayMatches) {
                         const merk = log.merk.toUpperCase();
@@ -1054,7 +1094,11 @@
                         <div class="grid grid-cols-2 gap-3 mb-5">
                             <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center relative">
                                 <i data-lucide="filter" class="text-blue-500 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
-                                <input type="number" id="week-filter-bulky" min="1" max="52" class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-slate-400" placeholder="Ketik Minggu..." value="${filters.week === 'all' ? '' : filters.week}" oninput="Handlers.autoFilterWeek('bulky', this.value)" />
+                                <input list="weeks-bulky" id="week-filter-bulky" class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-slate-400" placeholder="Ketik/Pilih Minggu..." value="${filters.week === 'all' || filters.week === 'Semua' ? 'Semua' : filters.week}" onchange="Handlers.autoFilterWeek('bulky', this.value)" />
+                                <datalist id="weeks-bulky">
+                                    <option value="Semua">Semua Minggu</option>
+                                    ${availableWeeks.map(w => `<option value="${w}">Minggu Ke-${w}</option>`).join('')}
+                                </datalist>
                             </div>
                             <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center">
                                 <i data-lucide="calendar-days" class="text-blue-500 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
@@ -1133,90 +1177,142 @@
             },
             
             Traceability: () => {
-                const term = app.state.traceFilters.searchTxt.trim().toLowerCase();
+                const filters = app.state.traceFilters;
                 let results = [];
+                let hasFiltered = false;
                 
-                if (term) {
-                    // Cari di Bulky Logs
-                    app.state.db.bulkyLogs?.forEach(log => {
-                        if (log.merk?.toLowerCase().includes(term)) {
-                            results.push({ type: 'bulky', date: log.tanggal, arrival: log.tanggalKedatangan, shift: log.shift, merk: log.merk, noBulky: log.noBulky, tujuan: log.tujuanSilo, qty: log.qtyAkhir, timestamp: new Date(log.timestamp).getTime() || new Date(log.tanggal).getTime() });
-                        }
-                    });
+                // Cari berdasar filter waktu (Tanggal atau Bulan) dan Shift
+                if (filters.date || filters.month) {
+                    hasFiltered = true;
+                    let targetLogs = app.state.db.opnameLogs || [];
                     
-                    // Cari di Opname Logs
-                    app.state.db.opnameLogs?.forEach(log => {
-                        ['silo1', 'silo2', 'silo3', 'silo4', 'tapioka'].forEach(silo => {
-                            if (log[silo] && log[silo].merk && log[silo].merk.toLowerCase().includes(term)) {
-                                const totalMasuk = silo === 'tapioka' ? (Number(log[silo].masuk)||0) : (Number(log[silo].masukZak)||0) + (Number(log[silo].masukBulky)||0) + (Number(log[silo].masuk)||0);
-                                const pakai = calcPakai(log[silo].awal, totalMasuk, log[silo].akhir);
-                                if (pakai > 0 || totalMasuk > 0) { // Hanya tampilkan jika ada pemakaian atau pemasukan
-                                    results.push({ type: 'opname', date: log.tanggal, shift: log.shift, siloName: silo.toUpperCase(), merk: log[silo].merk, pakai, masuk: totalMasuk, timestamp: new Date(log.timestamp).getTime() || new Date(log.tanggal).getTime() });
+                    // Filter berdasarkan waktu (Bulan akan timpa Tanggal jika diisi)
+                    if (filters.month) {
+                        targetLogs = targetLogs.filter(log => log.tanggal.startsWith(filters.month));
+                    } else if (filters.date) {
+                        targetLogs = targetLogs.filter(log => log.tanggal === filters.date);
+                    }
+                    
+                    // Filter berdasarkan Shift
+                    if (filters.shift && filters.shift !== 'all') {
+                        targetLogs = targetLogs.filter(log => String(log.shift) === String(filters.shift));
+                    }
+                    
+                    // Proses Log Opname yang sesuai
+                    targetLogs.forEach(opnameLog => {
+                        const dateStr = formatDate(opnameLog.tanggal);
+                        const dayName = getDayName(opnameLog.tanggal);
+                        
+                        ['silo1', 'silo2', 'silo3', 'silo4', 'tapioka'].forEach(siloKey => {
+                            const siloData = opnameLog[siloKey];
+                            if (siloData && siloData.merk) {
+                                const totalMasuk = siloKey === 'tapioka' ? (Number(siloData.masuk)||0) : (Number(siloData.masukZak)||0) + (Number(siloData.masukBulky)||0) + (Number(siloData.masuk)||0);
+                                const pakai = calcPakai(siloData.awal, totalMasuk, siloData.akhir);
+                                
+                                if (pakai > 0 || totalMasuk > 0) {
+                                    // Temukan apakah ada bulky terbaru yang sesuai dengan merk ini (Kedatangan <= Tgl Opname)
+                                    let relatedBulky = null;
+                                    const matchingBulkyLogs = (app.state.db.bulkyLogs || []).filter(b => {
+                                        return b.merk && b.merk.toLowerCase() === siloData.merk.toLowerCase() && 
+                                               (b.tanggalKedatangan <= opnameLog.tanggal || b.tanggal <= opnameLog.tanggal);
+                                    }).sort((a, b) => new Date(b.tanggalKedatangan || b.tanggal) - new Date(a.tanggalKedatangan || a.tanggal));
+                                    
+                                    if (matchingBulkyLogs.length > 0) {
+                                        relatedBulky = matchingBulkyLogs[0]; // Ambil yang paling baru sebelum/pada saat dipakai
+                                    }
+                                    
+                                    results.push({
+                                        id: `${opnameLog.tanggal}-${opnameLog.shift}-${siloKey}`,
+                                        opnameDate: opnameLog.tanggal,
+                                        dayName: dayName,
+                                        shift: opnameLog.shift,
+                                        siloName: siloKey.replace('silo', 'Silo ').toUpperCase(),
+                                        merk: siloData.merk,
+                                        pakai: pakai,
+                                        relatedBulky: relatedBulky
+                                    });
                                 }
                             }
                         });
                     });
                     
                     // Urutkan dari terbaru
-                    results.sort((a, b) => b.timestamp - a.timestamp);
+                    results.sort((a, b) => new Date(b.opnameDate) - new Date(a.opnameDate));
                 }
 
                 return `
                 <div class="max-w-2xl mx-auto space-y-6 animate-fade-in pb-8">
                     ${Components.Card(`
-                        <div class="mb-4">
+                        <div class="mb-5">
                             <h2 class="text-xl font-black mb-1 flex items-center tracking-tight text-slate-800">
-                                <i data-lucide="search" class="mr-2 text-indigo-600" style="width: 22px; height: 22px;"></i> Lacak Material (Traceability)
+                                <i data-lucide="search" class="mr-2 text-indigo-600" style="width: 22px; height: 22px;"></i> Lacak Material
                             </h2>
-                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ketahui histori kedatangan & pemakaian terigu</p>
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">Pilih waktu untuk mengetahui pemakaian & asal kedatangan terigu</p>
                         </div>
-                        <div class="relative mb-2">
-                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><i data-lucide="search" class="text-slate-400" style="width: 18px; height: 18px;"></i></div>
-                            <input type="text" id="trace-search" placeholder="Ketik Merk Terigu (Cth: B7, W3, Falconila)..." value="${app.state.traceFilters.searchTxt}" oninput="Handlers.autoFilterTrace(this.value)" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-bold pl-11 pr-4 py-3 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"/>
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div class="relative">
+                                <label class="block text-[9px] font-black text-indigo-600 mb-1 uppercase tracking-widest ml-1">Pilih Tanggal</label>
+                                <input type="date" value="${filters.date || ''}" onchange="Handlers.updateTraceFilter('date', this.value)" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm font-bold px-3 py-2.5 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 transition-all custom-date-input"/>
+                            </div>
+                            <div class="relative">
+                                <label class="block text-[9px] font-black text-indigo-600 mb-1 uppercase tracking-widest ml-1">Atau Bulan</label>
+                                <input type="month" value="${filters.month || ''}" onchange="Handlers.updateTraceFilter('month', this.value)" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm font-bold px-3 py-2.5 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 transition-all"/>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <label class="block text-[9px] font-black text-indigo-600 mb-1 uppercase tracking-widest ml-1">Shift Pemakaian</label>
+                            <select onchange="Handlers.updateTraceFilter('shift', this.value)" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-bold px-3 py-3 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none">
+                                <option value="all" ${filters.shift === 'all' || !filters.shift ? 'selected' : ''}>Semua Shift</option>
+                                <option value="1" ${filters.shift === '1' ? 'selected' : ''}>Shift 1</option>
+                                <option value="2" ${filters.shift === '2' ? 'selected' : ''}>Shift 2</option>
+                                <option value="3" ${filters.shift === '3' ? 'selected' : ''}>Shift 3</option>
+                            </select>
                         </div>
                     `, 'bg-white border-t-[4px] border-t-indigo-500 shadow-sm', 'p-5 sm:p-6')}
                     
                     <div id="trace-results">
-                        ${!term ? `
-                            <div class="text-center p-8 bg-slate-50 rounded-3xl border border-slate-200 border-dashed mt-4"><i data-lucide="scan-line" class="mx-auto text-slate-300 mb-3" style="width: 32px; height: 32px;"></i><p class="text-sm font-semibold text-slate-500">Ketik merk material di atas untuk mulai melacak.</p></div>
+                        ${!hasFiltered ? `
+                            <div class="text-center p-8 bg-slate-50 rounded-3xl border border-slate-200 border-dashed mt-4"><i data-lucide="scan-line" class="mx-auto text-slate-300 mb-3" style="width: 32px; height: 32px;"></i><p class="text-sm font-semibold text-slate-500">Silakan atur filter waktu di atas.</p></div>
                         ` : results.length === 0 ? `
-                            <div class="text-center p-8 bg-rose-50 rounded-3xl border border-rose-100 mt-4"><i data-lucide="file-warning" class="mx-auto text-rose-300 mb-3" style="width: 32px; height: 32px;"></i><p class="text-sm font-semibold text-rose-600">Material dengan merk "${term}" tidak ditemukan di histori.</p></div>
+                            <div class="text-center p-8 bg-slate-50 rounded-3xl border border-slate-200 border-dashed mt-4"><i data-lucide="file-question" class="mx-auto text-slate-300 mb-3" style="width: 32px; height: 32px;"></i><p class="text-sm font-semibold text-slate-500">Tidak ada pemakaian material pada waktu tersebut.</p></div>
                         ` : `
                             <div class="space-y-4">
-                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Ditemukan ${results.length} histori untuk "${term}"</div>
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Ditemukan ${results.length} data pemakaian</div>
                                 ${results.map(res => {
-                                    if (res.type === 'bulky') {
-                                        return Components.Card(`
-                                            <div class="flex justify-between items-start mb-3 border-b border-blue-100 pb-3">
-                                                <div class="flex items-center gap-2">
-                                                    <div class="bg-blue-100 text-blue-600 p-2 rounded-lg"><i data-lucide="truck" style="width: 16px; height: 16px;"></i></div>
-                                                    <div><div class="font-black text-slate-800 text-sm">Penerimaan Bulky</div><div class="text-[9px] font-bold text-slate-500">${formatDate(res.date)} • Shift ${res.shift}</div></div>
+                                    return Components.Card(`
+                                        <div class="flex justify-between items-start mb-3 border-b border-indigo-100 pb-3">
+                                            <div class="flex items-center gap-2">
+                                                <div class="bg-indigo-100 text-indigo-600 p-2 rounded-lg"><i data-lucide="factory" style="width: 16px; height: 16px;"></i></div>
+                                                <div><div class="font-black text-slate-800 text-sm">${res.siloName}</div><div class="text-[9px] font-bold text-slate-500">${res.dayName}, ${formatDate(res.opnameDate)} • Shift ${res.shift}</div></div>
+                                            </div>
+                                            <div class="text-right">
+                                                <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Pemakaian</span>
+                                                <span class="font-black text-indigo-600 text-sm">${res.pakai} <span class="text-[10px] font-bold opacity-70">kg</span></span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Detail Terigu:</span>
+                                                ${Components.Badge(res.merk, 'slate')}
+                                            </div>
+                                            
+                                            ${res.relatedBulky ? `
+                                                <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-200/60">
+                                                    <div><span class="block text-[8px] text-slate-400 font-bold uppercase mb-0.5">Sumber</span><span class="font-bold text-blue-600 text-[11px] flex items-center gap-1"><i data-lucide="truck" style="width:12px;height:12px"></i> Bulky</span></div>
+                                                    <div><span class="block text-[8px] text-slate-400 font-bold uppercase mb-0.5">Kedatangan</span><span class="font-bold text-slate-700 text-[11px]">${formatDate(res.relatedBulky.tanggalKedatangan || res.relatedBulky.tanggal)}</span></div>
+                                                    <div><span class="block text-[8px] text-slate-400 font-bold uppercase mb-0.5">No Kendaraan</span><span class="font-bold text-slate-700 text-[11px]">${res.relatedBulky.noBulky}</span></div>
+                                                    <div><span class="block text-[8px] text-slate-400 font-bold uppercase mb-0.5">Rincian Netto</span><span class="font-bold text-slate-700 text-[11px]">${res.relatedBulky.qtyAkhir} kg</span></div>
                                                 </div>
-                                                ${Components.Badge('Kedatangan', 'primary')}
-                                            </div>
-                                            <div class="grid grid-cols-2 gap-2 text-xs">
-                                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="block text-[9px] text-slate-400 uppercase font-bold mb-0.5">Merk</span><span class="font-bold text-slate-700">${res.merk}</span></div>
-                                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="block text-[9px] text-slate-400 uppercase font-bold mb-0.5">No. Bulky</span><span class="font-bold text-slate-700">${res.noBulky}</span></div>
-                                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="block text-[9px] text-slate-400 uppercase font-bold mb-0.5">Tgl Datang</span><span class="font-bold text-blue-600">${formatDate(res.arrival)}</span></div>
-                                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="block text-[9px] text-slate-400 uppercase font-bold mb-0.5">Netto (Akhir)</span><span class="font-bold text-slate-700">${res.qty} kg ke ${res.tujuan}</span></div>
-                                            </div>
-                                        `, 'border-l-[4px] border-l-blue-500 shadow-sm p-4');
-                                    } else {
-                                        return Components.Card(`
-                                            <div class="flex justify-between items-start mb-3 border-b border-emerald-100 pb-3">
-                                                <div class="flex items-center gap-2">
-                                                    <div class="bg-emerald-100 text-emerald-600 p-2 rounded-lg"><i data-lucide="factory" style="width: 16px; height: 16px;"></i></div>
-                                                    <div><div class="font-black text-slate-800 text-sm">Pemakaian Opname</div><div class="text-[9px] font-bold text-slate-500">${formatDate(res.date)} • Shift ${res.shift}</div></div>
+                                            ` : `
+                                                <div class="mt-3 pt-3 border-t border-slate-200/60 flex items-start gap-2 text-amber-700 bg-amber-50/50 p-2 rounded-lg">
+                                                    <i data-lucide="package" style="width: 14px; height: 14px; margin-top: 1px;" class="shrink-0 text-amber-500"></i>
+                                                    <span class="text-[11px] font-semibold">Keterangan: Menggunakan <b>Zak</b> dengan merk <b>${res.merk}</b>.</span>
                                                 </div>
-                                                ${Components.Badge('Penggunaan', 'success')}
-                                            </div>
-                                            <div class="grid grid-cols-3 gap-2 text-xs text-center">
-                                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="block text-[9px] text-slate-400 uppercase font-bold mb-0.5">Silo / Lokasi</span><span class="font-bold text-slate-700">${res.siloName}</span></div>
-                                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="block text-[9px] text-slate-400 uppercase font-bold mb-0.5">Pemasukan</span><span class="font-bold text-slate-700">${res.masuk} kg</span></div>
-                                                <div class="bg-emerald-50 p-2 rounded-lg border border-emerald-100"><span class="block text-[9px] text-emerald-600 uppercase font-bold mb-0.5">Dipakai</span><span class="font-black text-emerald-700">${res.pakai} kg</span></div>
-                                            </div>
-                                        `, 'border-l-[4px] border-l-emerald-500 shadow-sm p-4');
-                                    }
+                                            `}
+                                        </div>
+                                    `, 'border-l-[4px] border-l-indigo-500 shadow-sm p-4');
                                 }).join('')}
                             </div>
                         `}
@@ -1311,71 +1407,122 @@
                 window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
             },
 
-            // Updated Fix Visual Dashboard Share: Prevent cut off and increase blur resolution
-            shareDashboardImage: () => {
-                app.showGlobalMessage('Menyiapkan gambar...', false);
-                const el = document.getElementById('dashboard-capture-area');
-                if(!el) return;
+            // Updated Fix Visual Dashboard Share: Mencegah terpotong dan buram
+            shareDashboardImage: async () => {
+                app.showGlobalMessage('Menyiapkan gambar HD...', false);
+                const originalEl = document.getElementById('dashboard-capture-area');
+                if(!originalEl) return;
                 
-                const ignoreEls = el.querySelectorAll('.no-capture');
-                const headerEls = el.querySelectorAll('.capture-header');
-                
+                // Sembunyikan tombol
+                const ignoreEls = originalEl.querySelectorAll('.no-capture');
                 ignoreEls.forEach(e => e.style.display = 'none');
-                headerEls.forEach(e => e.style.display = 'block');
                 
-                // Mencegah terpotong karena view di layar HP (Paksa lebar desktop sebelum capture)
-                const originalScrollY = window.scrollY;
-                window.scrollTo(0, 0); 
-                const originalWidth = el.style.width;
-                const originalMaxWidth = el.style.maxWidth;
-                el.style.width = '800px'; 
-                el.style.maxWidth = 'none';
+                // Kloning area untuk dirender
+                const cloneEl = originalEl.cloneNode(true);
                 
-                setTimeout(async () => {
-                    try {
-                        const canvas = await html2canvas(el, { 
-                            scale: 2.5, // Resolusi diperbesar agar tajam
-                            useCORS: true, 
-                            backgroundColor: '#F4F7F9',
-                            windowWidth: 800, 
-                            scrollY: 0,
-                            x: 0,
-                            y: 0
-                        });
-                        const imgDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-                        
-                        // Kembalikan ke normal
-                        el.style.width = originalWidth;
-                        el.style.maxWidth = originalMaxWidth;
-                        window.scrollTo(0, originalScrollY);
-                        ignoreEls.forEach(e => e.style.display = ''); 
-                        headerEls.forEach(e => e.style.display = 'none');
-                        
-                        const { shift, date } = getCurrentShiftInfo();
-                        let msg = `*LAPORAN VISUAL STOK MHS*\nHari/Tanggal : ${getDayName(date)}, ${formatDate(date)}\nShift berjalan : ${shift}\n\n`;
-                        const s = app.state.db.lastStock;
-                        const formatSiloMsg = (name, type, data) => {
-                            const currentBatch = data?.batches?.[0];
-                            const nextBatch = data?.batches?.[1];
-                            let str = `*${name} (${type} - ${data?.merk || '-'})*\nStok Total: ${data?.akhir || 0} kg\n`;
-                            if(currentBatch && currentBatch.gluten !== '-') str += `Gluten Dipakai: ${currentBatch.gluten}% (Sisa: ${currentBatch.qty} kg)\n`;
-                            if(nextBatch && nextBatch.gluten !== '-') str += `Next FIFO: ${nextBatch.gluten}%\n`;
-                            return str + `\n`;
-                        };
-                        msg += formatSiloMsg('SILO 1', 'Medium', s.silo1);
-                        msg += formatSiloMsg('SILO 2', 'Soft', s.silo2);
-                        msg += formatSiloMsg('SILO 3', 'Soft', s.silo3);
-                        msg += formatSiloMsg('SILO 4', 'Medium', s.silo4);
-                        msg += `*Mini Silo Tapioka (${s.tapioka?.merk || '-'})*: ${s.tapioka?.akhir || 0} kg\n`;
-                        msg += `*Gula Mesh 30 (${s.gula?.merk || '-'})*: ${s.gula?.akhir || 0} kg\n`;
+                // Kembalikan tombol di UI asli
+                ignoreEls.forEach(e => e.style.display = ''); 
+                
+                // Tampilkan header di hasil kloning
+                const headerEl = cloneEl.querySelector('.capture-header');
+                if (headerEl) headerEl.style.display = 'block';
 
-                        Handlers._showShareModal(imgDataUrl, msg);
-                    } catch(e) {
-                        el.style.width = originalWidth; el.style.maxWidth = originalMaxWidth; window.scrollTo(0, originalScrollY);
-                        ignoreEls.forEach(e => e.style.display = ''); headerEls.forEach(e => e.style.display = 'none');
-                        app.showGlobalMessage('Gagal memuat visual: ' + (e.message || 'Coba lagi'), true);
+                // Hapus tombol dari hasil kloning
+                const cloneIgnoreEls = cloneEl.querySelectorAll('.no-capture');
+                cloneIgnoreEls.forEach(e => e.remove());
+
+                // Setup wrapper (Diposisikan fixed agar berada di viewport virtual)
+                const wrapper = document.createElement('div');
+                wrapper.style.position = 'fixed'; 
+                wrapper.style.top = '0';
+                wrapper.style.left = '-9999px'; 
+                wrapper.style.width = '800px'; 
+                wrapper.style.height = 'max-content'; // Memaksa wadah meluas ke bawah
+                wrapper.style.backgroundColor = '#F4F7F9';
+                wrapper.style.padding = '30px';
+                wrapper.style.boxSizing = 'border-box';
+                wrapper.style.zIndex = '-1';
+                
+                cloneEl.classList.remove('animate-fade-in');
+                
+                // Modifikasi CSS pada kloningan agar tidak memotong isi
+                const allNodes = cloneEl.querySelectorAll('*');
+                allNodes.forEach(node => {
+                    node.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
+                    node.style.animation = 'none';
+                    node.style.transition = 'none';
+                    
+                    // Hilangkan paksaan tinggi agar menyesuaikan isi (mencegah kepotong vertikal)
+                    if (node.classList.contains('h-full')) {
+                        node.classList.remove('h-full');
+                        node.style.height = '100%'; 
+                        node.style.minHeight = 'max-content';
                     }
-                }, 300);
+                    
+                    // Cegah pemotongan teks horizontal
+                    if (node.classList.contains('truncate')) {
+                        node.classList.remove('truncate');
+                        node.style.whiteSpace = 'normal';
+                        node.style.wordBreak = 'break-word';
+                    }
+                    
+                    // Buat latar belakang solid agar warna lebih tajam
+                    if (node.classList.contains('bg-white/90') || node.classList.contains('bg-white/80')) {
+                        node.classList.remove('bg-white/90', 'bg-white/80');
+                        node.classList.add('bg-white');
+                        node.style.backgroundColor = '#ffffff';
+                    }
+                    
+                    // Hapus limit overflow (kecuali untuk efek tabung silo)
+                    if (node.classList.contains('overflow-hidden') && !node.classList.contains('silo-glass') && !node.id.includes('layout')) {
+                        node.classList.remove('overflow-hidden');
+                    }
+                });
+
+                wrapper.appendChild(cloneEl);
+                document.body.appendChild(wrapper);
+                
+                try {
+                    // Tunggu font siap & DOM teregistrasi dengan baik
+                    await document.fonts.ready;
+                    await new Promise(resolve => setTimeout(resolve, 600)); 
+
+                    const canvas = await html2canvas(wrapper, { 
+                        scale: 2.5, // Resolusi HD
+                        useCORS: true, 
+                        backgroundColor: '#F4F7F9',
+                        windowWidth: 800,
+                        windowHeight: wrapper.scrollHeight + 100, // Tambahan ekstra 100px agar aman tidak kepotong
+                        logging: false
+                    });
+                    
+                    const imgDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                    document.body.removeChild(wrapper);
+                    
+                    // Buat Teks WA
+                    const { shift, date } = getCurrentShiftInfo();
+                    let msg = `*LAPORAN VISUAL STOK MHS*\nHari/Tanggal : ${getDayName(date)}, ${formatDate(date)}\nShift berjalan : ${shift}\n\n`;
+                    const s = app.state.db.lastStock;
+                    const formatSiloMsg = (name, type, data) => {
+                        const currentBatch = data?.batches?.[0];
+                        const nextBatch = data?.batches?.[1];
+                        let str = `*${name} (${type} - ${data?.merk || '-'})*\nStok Total: ${data?.akhir || 0} kg\n`;
+                        if(currentBatch && currentBatch.gluten !== '-') str += `Gluten Dipakai: ${currentBatch.gluten}% (Sisa: ${currentBatch.qty} kg)\n`;
+                        if(nextBatch && nextBatch.gluten !== '-') str += `Next FIFO: ${nextBatch.gluten}%\n`;
+                        return str + `\n`;
+                    };
+                    msg += formatSiloMsg('SILO 1', 'Medium', s.silo1);
+                    msg += formatSiloMsg('SILO 2', 'Soft', s.silo2);
+                    msg += formatSiloMsg('SILO 3', 'Soft', s.silo3);
+                    msg += formatSiloMsg('SILO 4', 'Medium', s.silo4);
+                    msg += `*Mini Silo Tapioka (${s.tapioka?.merk || '-'})*: ${s.tapioka?.akhir || 0} kg\n`;
+                    msg += `*Gula Mesh 30 (${s.gula?.merk || '-'})*: ${s.gula?.akhir || 0} kg\n`;
+
+                    Handlers._showShareModal(imgDataUrl, msg);
+                } catch(e) {
+                    if(document.body.contains(wrapper)) document.body.removeChild(wrapper);
+                    app.showGlobalMessage('Gagal memuat visual: ' + (e.message || 'Coba lagi'), true);
+                }
             },
             
             _showShareModal: (dataUrl, textMsg) => {
@@ -1388,7 +1535,7 @@
                 div.innerHTML = `
                     <div class="bg-white rounded-[2rem] w-full max-w-md shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
                         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                            <h3 class="font-black text-slate-800 text-lg">Pratinjau Laporan</h3>
+                            <h3 class="font-black text-slate-800 text-lg">Pratinjau Laporan (HD)</h3>
                             <button onclick="document.getElementById('share-modal').remove()" class="p-2 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-full transition-colors"><i data-lucide="x" style="width: 18px; height: 18px;"></i></button>
                         </div>
                         <div class="p-4 overflow-y-auto flex-1 bg-slate-100 flex justify-center items-start">
@@ -1555,29 +1702,27 @@
             // Updated Filter Autofocus Function
             autoFilterWeek: (tab, val) => {
                 const filters = app.state[`${tab}Filters`];
-                filters.week = val === '' ? 'all' : val;
+                filters.week = (val === '' || val.toLowerCase() === 'semua') ? 'Semua' : val;
                 app.renderActiveTab();
                 
-                // Kembalikan fokus ke input setelah re-render
                 setTimeout(() => {
                     const id = tab === 'recap' ? 'week-filter-recap' : 'week-filter-bulky';
                     const el = document.getElementById(id);
                     if(el) {
                         el.focus();
-                        // Memastikan kursor berada di akhir angka
-                        const len = el.value.length;
-                        if(el.setSelectionRange) { el.setSelectionRange(len, len); }
+                        if(el.setSelectionRange) { el.setSelectionRange(el.value.length, el.value.length); }
                     }
                 }, 10);
             },
             
-            autoFilterTrace: (val) => {
-                app.state.traceFilters.searchTxt = val;
+            updateTraceFilter: (field, value) => {
+                app.state.traceFilters[field] = value;
+                if (field === 'month' && value) {
+                    app.state.traceFilters.date = ''; // Reset tanggal jika bulan diisi
+                } else if (field === 'date' && value) {
+                    app.state.traceFilters.month = ''; // Reset bulan jika tanggal diisi
+                }
                 app.renderActiveTab();
-                setTimeout(() => {
-                    const el = document.getElementById('trace-search');
-                    if(el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
-                }, 10);
             },
 
             changeRecapDay: (val) => { app.state.recapFilters.day = val; app.renderActiveTab(); },
@@ -1590,7 +1735,7 @@
                     const logDate = new Date(log.timestamp);
                     const logWeek = getWeekNumber(logDate).toString();
                     const logDayName = getDayName(log.tanggal).toLowerCase();
-                    const weekMatches = filters.week === 'all' || logWeek === filters.week.toString();
+                    const weekMatches = filters.week === 'Semua' || filters.week === 'all' || logWeek === filters.week.toString();
                     const dayMatches = filters.day === 'all' || logDayName === filters.day.toLowerCase();
                     return weekMatches && dayMatches;
                 });
@@ -1685,7 +1830,7 @@
                 const filters = app.state.recapFilters;
                 let filteredLogs = logs.filter(log => {
                     const logWeek = getWeekNumber(new Date(log.timestamp)).toString();
-                    return (filters.week === 'all' || logWeek === filters.week.toString()) && (filters.day === 'all' || getDayName(log.tanggal).toLowerCase() === filters.day.toLowerCase());
+                    return (filters.week === 'Semua' || filters.week === 'all' || logWeek === filters.week.toString()) && (filters.day === 'all' || getDayName(log.tanggal).toLowerCase() === filters.day.toLowerCase());
                 }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 if (filteredLogs.length === 0) { app.showGlobalMessage("Tidak ada data.", true); return; }
 
@@ -1731,7 +1876,7 @@
                 let filteredLogs = logs.filter(log => {
                     const logDate = new Date(log.timestamp || log.tanggalKedatangan || log.tanggal);
                     const logWeek = getWeekNumber(logDate).toString();
-                    return (filters.week === 'all' || logWeek === filters.week.toString()) && (filters.day === 'all' || getDayName(log.tanggal).toLowerCase() === filters.day.toLowerCase());
+                    return (filters.week === 'Semua' || filters.week === 'all' || logWeek === filters.week.toString()) && (filters.day === 'all' || getDayName(log.tanggal).toLowerCase() === filters.day.toLowerCase());
                 });
 
                 if(filteredLogs.length === 0) { app.showGlobalMessage('Tidak ada data bulky untuk dicetak.', true); return; }
@@ -1755,7 +1900,7 @@
 
                     const pageDiv = document.createElement('div');
                     pageDiv.style.width = '800px'; pageDiv.style.minHeight = '1131px'; pageDiv.style.backgroundColor = '#ffffff'; pageDiv.style.padding = '40px'; pageDiv.style.boxSizing = 'border-box'; pageDiv.style.fontFamily = 'sans-serif';
-                    const filterInfo = `Filter: ${filters.week === 'all' ? 'Semua Minggu' : 'Minggu Ke-'+filters.week} | ${filters.day === 'all' ? 'Semua Hari' : filters.day}`;
+                    const filterInfo = `Filter: ${filters.week === 'Semua' || filters.week === 'all' ? 'Semua Minggu' : 'Minggu Ke-'+filters.week} | ${filters.day === 'all' ? 'Semua Hari' : filters.day}`;
 
                     let html = `
                         <div style="text-align:center; border-bottom: 2px solid #cbd5e1; padding-bottom: 15px; margin-bottom: 20px;">
@@ -1821,7 +1966,7 @@
                 const filters = app.state.bulkyFilters;
                 let filteredLogs = logs.filter(log => {
                     const logWeek = getWeekNumber(new Date(log.timestamp)).toString();
-                    return (filters.week === 'all' || logWeek === filters.week.toString()) && (filters.day === 'all' || getDayName(log.tanggal).toLowerCase() === filters.day.toLowerCase());
+                    return (filters.week === 'Semua' || filters.week === 'all' || logWeek === filters.week.toString()) && (filters.day === 'all' || getDayName(log.tanggal).toLowerCase() === filters.day.toLowerCase());
                 }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 if (filteredLogs.length === 0) { app.showGlobalMessage("Tidak ada data.", true); return; }
 
@@ -1837,7 +1982,7 @@
 
             shareBulkyRecap: () => {
                 const recapData = window.currentBulkyRecapData || {};
-                let msg = `*REKAP BONGKAR BULKY*\nMinggu: ${window.currentBulkyFilters?.week === 'all' ? 'Semua Minggu' : 'Ke-'+window.currentBulkyFilters?.week}\nHari: ${window.currentBulkyFilters?.day === 'all' ? 'Semua Hari' : window.currentBulkyFilters?.day.charAt(0).toUpperCase() + window.currentBulkyFilters?.day.slice(1)}\n\n`;
+                let msg = `*REKAP BONGKAR BULKY*\nMinggu: ${window.currentBulkyFilters?.week === 'all' || window.currentBulkyFilters?.week === 'Semua' ? 'Semua Minggu' : 'Ke-'+window.currentBulkyFilters?.week}\nHari: ${window.currentBulkyFilters?.day === 'all' ? 'Semua Hari' : window.currentBulkyFilters?.day.charAt(0).toUpperCase() + window.currentBulkyFilters?.day.slice(1)}\n\n`;
                 if (Object.keys(recapData).length === 0) msg += `Belum ada data.`;
                 else Object.keys(recapData).forEach(merk => { msg += `*${merk}*\n- Total Kendaraan: ${recapData[merk].count}\n- Total Muatan: ${recapData[merk].totalAwal} kg\n- Total Susut: ${recapData[merk].totalSusut} kg\n\n`; });
                 window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
@@ -1876,9 +2021,14 @@
             }
         };
 
-        window.onload = () => app.render();
+        window.onload = () => {
+            app.render();
+            // Lakukan sinkronisasi data (tarik data terbaru) di latar belakang jika user sudah login
+            if (app.state.user) {
+                app.fetchData();
+            }
+        };
 
     </script>
 </body>
 </html>
-```eof
