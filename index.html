@@ -73,9 +73,23 @@
 
         const API_URL = "https://script.google.com/macros/s/AKfycbxnWOh6-FIn5v_kNalNsIi4QgZoRJ_6htXU_N0AWln2-nUWPTuEuRRwr9mjMCTB6TODdQ/exec";
         const DAYS_OF_WEEK = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+        
         const SILO_MERK_OPTIONS = {
             soft: ['B7', 'LM', 'MILA', 'FALCONILA', 'B7 MKL', 'LAINNYA'],
             medium: ['W3', 'LAINNYA']
+        };
+
+        const SILO_LINES = {
+            silo1: ['2.1', '4.1'],
+            silo2: ['1.1', '3.1', '5.1', '2.1'],
+            silo3: ['1.1', '2.1', '3.1', '5.1', '4.2'],
+            silo4: ['2.2', '3.2', '5.2']
+        };
+
+        const parseLines = (val) => {
+            if (Array.isArray(val)) return val;
+            if (typeof val === 'string') return val.split(/[|,]/).map(s => s.trim()).filter(Boolean);
+            return [];
         };
 
         const getWeekNumber = (date) => {
@@ -211,7 +225,7 @@
                         iconContainer.className = 'icon-container transition-all duration-300 text-blue-600 transform -translate-y-1 drop-shadow-sm';
                         label.className = 'nav-label text-[9px] sm:text-[10px] mt-1 transition-all duration-300 font-black text-blue-700';
                         if (icon) { icon.style.width = '24px'; icon.style.height = '24px'; }
-                        el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); // Auto scroll for smaller screens
+                        el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                     } else {
                         iconContainer.className = 'icon-container transition-all duration-300 text-slate-400 group-hover:text-slate-600 group-hover:-translate-y-0.5';
                         label.className = 'nav-label text-[9px] sm:text-[10px] mt-1 transition-all duration-300 font-bold text-slate-400';
@@ -493,29 +507,29 @@
 
                 return `
                 <div id="layout-container" class="flex flex-col h-screen bg-[#F4F7F9] text-slate-800 font-sans selection:bg-blue-200">
-                    <header class="bg-gradient-to-br from-[#0B1B3D] via-[#112a5f] to-[#0B1B3D] text-white pt-10 pb-8 px-6 rounded-b-[2.5rem] shadow-xl relative overflow-hidden z-20 shrink-0">
+                    <header class="bg-gradient-to-br from-[#0B1B3D] via-[#112a5f] to-[#0B1B3D] text-white pt-6 pb-4 px-4 sm:pt-8 sm:pb-6 rounded-b-[1.5rem] shadow-xl relative overflow-hidden z-20 shrink-0">
                         <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                        <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/30 rounded-full mix-blend-screen filter blur-3xl"></div>
+                        <div class="absolute -top-32 -right-24 w-64 h-64 bg-blue-500/30 rounded-full mix-blend-screen filter blur-3xl"></div>
                         <div class="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/20 to-transparent"></div>
                         
                         <div class="relative z-10 flex justify-between items-center">
-                            <div class="flex items-center gap-4">
-                                <div class="bg-white/10 p-3 rounded-2xl shadow-inner border border-white/20 backdrop-blur-md"><i data-lucide="building-2" class="text-white drop-shadow-md" style="width: 26px; height: 26px;"></i></div>
+                            <div class="flex items-center gap-3 sm:gap-4">
+                                <div class="bg-white/10 p-2 sm:p-3 rounded-xl shadow-inner border border-white/20 backdrop-blur-md"><i data-lucide="building-2" class="text-white drop-shadow-md" style="width: 20px; height: 20px;"></i></div>
                                 <div>
-                                    <h1 class="text-3xl font-black tracking-tight leading-none mb-1 text-white flex items-center">MHS<span class="text-blue-400 font-bold ml-0.5">Pro</span></h1>
+                                    <h1 class="text-xl sm:text-2xl font-black tracking-tight leading-none mb-1 text-white flex items-center">MHS<span class="text-blue-400 font-bold ml-0.5">Pro</span></h1>
                                     <div class="flex items-center gap-2 mt-1">
                                         ${Components.Badge(app.state.user?.role, app.state.user?.role === 'operator' ? 'primary' : 'warning')}
-                                        <p class="text-[10px] font-bold text-blue-200 uppercase tracking-widest">${app.state.user?.username}</p>
+                                        <p class="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-widest">${app.state.user?.username}</p>
                                     </div>
                                 </div>
                             </div>
                             
                             <div class="flex flex-col items-end gap-2">
-                                <button id="sync-btn" onclick="app.fetchData()" class="group flex items-center gap-2 bg-white/10 p-2 px-3 rounded-xl backdrop-blur-md border border-white/10 shadow-lg hover:bg-white/20 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-wait">
+                                <button id="sync-btn" onclick="app.fetchData()" class="group flex items-center gap-2 bg-white/10 p-1.5 px-2 sm:p-2 sm:px-3 rounded-xl backdrop-blur-md border border-white/10 shadow-lg hover:bg-white/20 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-wait">
                                     <i data-lucide="refresh-cw" id="sync-icon" class="text-blue-300 group-hover:rotate-180 transition-transform duration-700" style="width: 14px; height: 14px;"></i>
-                                    <span id="sync-text" class="text-[10px] font-bold text-white tracking-widest uppercase hidden sm:inline">Sync</span>
+                                    <span id="sync-text" class="text-[9px] sm:text-[10px] font-bold text-white tracking-widest uppercase hidden sm:inline">Sync</span>
                                 </button>
-                                <button onclick="app.logout()" class="flex items-center gap-1.5 text-[10px] font-bold text-rose-300 hover:text-rose-200 uppercase tracking-widest transition-colors">
+                                <button onclick="app.logout()" class="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-bold text-rose-300 hover:text-rose-200 uppercase tracking-widest transition-colors">
                                     <i data-lucide="log-out" style="width: 12px; height: 12px;"></i> Keluar
                                 </button>
                             </div>
@@ -680,11 +694,11 @@
                 if (!app.state.stockForm) {
                     app.state.stockForm = {
                         tanggal: autoDate, shift: autoShift,
-                        silo1: { merk: db.lastStock?.silo1?.merk || '', customMerk: '', awal: db.lastStock?.silo1?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '' },
-                        silo2: { merk: db.lastStock?.silo2?.merk || '', awal: db.lastStock?.silo2?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '' },
-                        silo3: { merk: db.lastStock?.silo3?.merk || '', awal: db.lastStock?.silo3?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '' },
-                        silo4: { merk: db.lastStock?.silo4?.merk || '', customMerk: '', awal: db.lastStock?.silo4?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '' },
-                        tapioka: { merk: db.lastStock?.tapioka?.merk || '', awal: db.lastStock?.tapioka?.akhir || 0, masuk: '', akhir: '' }, 
+                        silo1: { merk: db.lastStock?.silo1?.merk || '', customMerk: '', awal: db.lastStock?.silo1?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
+                        silo2: { merk: db.lastStock?.silo2?.merk || '', awal: db.lastStock?.silo2?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
+                        silo3: { merk: db.lastStock?.silo3?.merk || '', awal: db.lastStock?.silo3?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
+                        silo4: { merk: db.lastStock?.silo4?.merk || '', customMerk: '', awal: db.lastStock?.silo4?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
+                        tapioka: { merk: db.lastStock?.tapioka?.merk || '', awal: db.lastStock?.tapioka?.akhir || 0, masuk: '', akhir: '', lines: [] }, 
                         gula: { merk: db.lastStock?.gula?.merk || '', akhir: db.lastStock?.gula?.akhir || 0 },
                         catatanOpname: '', serahTerima: ['', '', '', '', '']
                     };
@@ -702,6 +716,28 @@
                     const totalMasuk = (Number(data.masukZak) || 0) + (Number(data.masukBulky) || 0);
                     const pemakaian = calcPakai(data.awal, totalMasuk, data.akhir);
                     
+                    const lineOpts = SILO_LINES[siloKey];
+                    let lineHTML = '';
+                    if (lineOpts) {
+                        const selLines = parseLines(data.lines);
+                        const badges = lineOpts.map(l => {
+                            const isSel = selLines.includes(l);
+                            const cls = isSel ? 'bg-blue-500 text-white border-blue-600 shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50';
+                            return `<button type="button" onclick="Handlers.toggleLine('${siloKey}', '${l}')" class="px-3 py-1.5 rounded-lg border text-[10px] sm:text-xs font-black transition-all ${cls}">${l}</button>`;
+                        }).join('');
+                        lineHTML = `
+                            <div class="bg-slate-50/80 p-3 sm:p-4 rounded-2xl border border-slate-200/60 mb-5 shadow-inner">
+                                <div class="flex justify-between items-center mb-2.5">
+                                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center"><i data-lucide="git-branch" class="mr-1.5" style="width: 14px; height: 14px;"></i> Aktual Pemakaian Line</p>
+                                    <button type="button" onclick="Handlers.selectAllLines('${siloKey}')" class="text-[9px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded-md border border-blue-100 transition-colors active:scale-95">Pilih Semua</button>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    ${badges}
+                                </div>
+                            </div>
+                        `;
+                    }
+
                     return Components.Card(`
                         <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
                             <div class="flex items-center gap-3">
@@ -726,6 +762,8 @@
                                 <div class="col-span-2">${Components.FloatingInput({ id: `sf-${siloKey}-gluten`, label: "Gluten % (Jika ada pemasukan)", type: "number", step: "0.1", suffix: "%", value: data.gluten, onInput: `Handlers.updateStockForm('${siloKey}', 'gluten', this.value)` })}</div>
                             </div>
                         </div>
+
+                        ${lineHTML}
 
                         <div class="grid grid-cols-2 gap-3 items-start mb-5">
                             ${Components.FloatingInput({ label: "Stock Awal", type: "number", suffix: "kg", value: data.awal, disabled: true })}
@@ -794,19 +832,23 @@
                         `, 'mb-6')}
 
                         ${Components.Card(`
-                            <h3 class="font-black text-slate-800 text-md sm:text-lg mb-3 flex items-center"><div class="p-1.5 sm:p-2 bg-blue-50 text-blue-600 rounded-lg mr-2"><i data-lucide="pen-tool" stroke-width="2.5" style="width: 16px; height: 16px;"></i></div> Catatan Opname & Handover</h3>
-                            <div class="flex items-start bg-slate-50 p-1 rounded-2xl border border-slate-200 mb-3 shadow-inner">
-                                <textarea rows="2" id="sf-catatanOpname" oninput="app.state.stockForm.catatanOpname = this.value" placeholder="Catatan operasional..." class="w-full bg-transparent p-3 text-sm font-medium text-slate-800 outline-none resize-none placeholder-slate-400">${fData.catatanOpname}</textarea>
+                            <h3 class="font-black text-slate-800 text-md sm:text-lg mb-3 flex items-center"><div class="p-1.5 sm:p-2 bg-blue-50 text-blue-600 rounded-lg mr-2"><i data-lucide="pen-tool" stroke-width="2.5" style="width: 16px; height: 16px;"></i></div> Catatan Opname Shift</h3>
+                            <div class="flex items-start bg-slate-50 p-1 rounded-2xl border border-slate-200 shadow-inner">
+                                <textarea rows="2" id="sf-catatanOpname" oninput="app.state.stockForm.catatanOpname = this.value" placeholder="Tulis catatan operasional shift ini..." class="w-full bg-transparent p-3 text-sm font-medium text-slate-800 outline-none resize-none placeholder-slate-400">${fData.catatanOpname}</textarea>
                             </div>
+                        `, 'mb-6 border-l-[4px] border-l-blue-400')}
+
+                        ${Components.Card(`
+                            <h3 class="font-black text-slate-800 text-md sm:text-lg mb-3 flex items-center"><div class="p-1.5 sm:p-2 bg-emerald-50 text-emerald-600 rounded-lg mr-2"><i data-lucide="message-square" stroke-width="2.5" style="width: 16px; height: 16px;"></i> Serah Terima (Handover)</h3>
                             <div class="space-y-2.5">
                                 ${[0, 1, 2, 3].map(i => `
                                     <div class="flex items-start bg-white p-1.5 sm:p-2 rounded-xl border border-slate-200 shadow-sm">
                                         <span class="text-slate-400 text-[10px] sm:text-xs font-black w-8 text-center pt-2 sm:pt-2.5">${i + 1}.</span>
-                                        <textarea rows="1" oninput="app.state.stockForm.serahTerima[${i}] = this.value; this.style.height='auto'; this.style.height=this.scrollHeight+'px';" placeholder="Handover..." class="flex-1 bg-transparent p-1.5 sm:p-2 text-xs sm:text-sm font-medium text-slate-800 outline-none resize-none overflow-hidden">${fData.serahTerima[i]}</textarea>
+                                        <textarea rows="1" oninput="app.state.stockForm.serahTerima[${i}] = this.value; this.style.height='auto'; this.style.height=this.scrollHeight+'px';" placeholder="Pesan handover ke shift selanjutnya..." class="flex-1 bg-transparent p-1.5 sm:p-2 text-xs sm:text-sm font-medium text-slate-800 outline-none resize-none overflow-hidden">${fData.serahTerima[i]}</textarea>
                                     </div>
                                 `).join('')}
                             </div>
-                        `, 'mb-6 border-l-[4px] border-l-blue-400')}
+                        `, 'mb-6 border-l-[4px] border-l-emerald-400')}
 
                         <div class="mt-8 w-full pb-8">
                             <div class="flex gap-2 sm:gap-3 flex-col sm:flex-row">
@@ -917,6 +959,15 @@
                                 <p class="text-xs sm:text-sm text-slate-700 font-medium italic whitespace-pre-wrap leading-relaxed border-l-2 border-blue-300 pl-3">"${log.catatanOpname}"</p>
                             </div>`;
                         }
+                        
+                        const linesStr1 = parseLines(log.silo1?.lines).join(', ');
+                        const lineBadge1 = linesStr1 ? `<span class="block text-[8px] sm:text-[9px] text-blue-500 font-bold mt-0.5 leading-tight">Line: ${linesStr1}</span>` : '';
+                        const linesStr2 = parseLines(log.silo2?.lines).join(', ');
+                        const lineBadge2 = linesStr2 ? `<span class="block text-[8px] sm:text-[9px] text-blue-500 font-bold mt-0.5 leading-tight">Line: ${linesStr2}</span>` : '';
+                        const linesStr3 = parseLines(log.silo3?.lines).join(', ');
+                        const lineBadge3 = linesStr3 ? `<span class="block text-[8px] sm:text-[9px] text-blue-500 font-bold mt-0.5 leading-tight">Line: ${linesStr3}</span>` : '';
+                        const linesStr4 = parseLines(log.silo4?.lines).join(', ');
+                        const lineBadge4 = linesStr4 ? `<span class="block text-[8px] sm:text-[9px] text-blue-500 font-bold mt-0.5 leading-tight">Line: ${linesStr4}</span>` : '';
 
                         return Components.Card(`
                             <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
@@ -934,10 +985,10 @@
                                         <th class="p-3 sm:px-4 sm:py-3 font-black w-[35%]">Item / Silo</th><th class="p-3 sm:px-4 sm:py-3 font-black text-right">Awal</th><th class="p-3 sm:px-4 sm:py-3 font-black text-right">Masuk</th><th class="p-3 sm:px-4 sm:py-3 font-black text-right text-blue-600">Pakai</th><th class="p-3 sm:px-4 sm:py-3 font-black text-right">Akhir</th>
                                     </tr></thead>
                                     <tbody class="divide-y divide-slate-100">
-                                        <tr class="hover:bg-slate-50/50 transition-colors"><td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 1 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo1?.merk}</span></td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo1?.awal || 0}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo1)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo1?.awal, getTotalMasuk(log.silo1), log.silo1?.akhir)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo1?.akhir || 0}</td></tr>
-                                        <tr class="hover:bg-slate-50/50 transition-colors"><td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 2 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo2?.merk}</span></td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo2?.awal || 0}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo2)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo2?.awal, getTotalMasuk(log.silo2), log.silo2?.akhir)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo2?.akhir || 0}</td></tr>
-                                        <tr class="hover:bg-slate-50/50 transition-colors"><td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 3 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo3?.merk}</span></td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo3?.awal || 0}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo3)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo3?.awal, getTotalMasuk(log.silo3), log.silo3?.akhir)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo3?.akhir || 0}</td></tr>
-                                        <tr class="hover:bg-slate-50/50 transition-colors"><td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 4 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo4?.merk}</span></td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo4?.awal || 0}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo4)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo4?.awal, getTotalMasuk(log.silo4), log.silo4?.akhir)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo4?.akhir || 0}</td></tr>
+                                        <tr class="hover:bg-slate-50/50 transition-colors"><td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 1 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo1?.merk}</span>${lineBadge1}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo1?.awal || 0}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo1)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo1?.awal, getTotalMasuk(log.silo1), log.silo1?.akhir)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo1?.akhir || 0}</td></tr>
+                                        <tr class="hover:bg-slate-50/50 transition-colors"><td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 2 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo2?.merk}</span>${lineBadge2}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo2?.awal || 0}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo2)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo2?.awal, getTotalMasuk(log.silo2), log.silo2?.akhir)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo2?.akhir || 0}</td></tr>
+                                        <tr class="hover:bg-slate-50/50 transition-colors"><td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 3 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo3?.merk}</span>${lineBadge3}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo3?.awal || 0}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo3)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo3?.awal, getTotalMasuk(log.silo3), log.silo3?.akhir)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo3?.akhir || 0}</td></tr>
+                                        <tr class="hover:bg-slate-50/50 transition-colors"><td class="p-3 sm:px-4 sm:py-3 font-bold text-slate-800">Silo 4 <span class="block text-[9px] text-slate-400 font-semibold">${log.silo4?.merk}</span>${lineBadge4}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.silo4?.awal || 0}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600 align-top">${renderMasukCell(log.silo4)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.silo4?.awal, getTotalMasuk(log.silo4), log.silo4?.akhir)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.silo4?.akhir || 0}</td></tr>
                                         <tr class="hover:bg-slate-50/50 transition-colors bg-amber-50/20"><td class="p-3 sm:px-4 sm:py-3 font-bold text-amber-900">Tapioka <span class="block text-[9px] text-amber-700/60 font-semibold">${log.tapioka?.merk}</span></td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.tapioka?.awal || 0}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-medium text-slate-600">${log.tapioka?.masuk || '-'}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-black text-blue-600 bg-blue-50/30">${calcP(log.tapioka?.awal, log.tapioka?.masuk, log.tapioka?.akhir)}</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.tapioka?.akhir || 0}</td></tr>
                                         <tr class="hover:bg-slate-50/50 transition-colors bg-indigo-50/20"><td class="p-3 sm:px-4 sm:py-3 font-bold text-indigo-900">Gula <span class="block text-[9px] text-indigo-700/60 font-semibold">${log.gula?.merk}</span></td><td class="p-3 sm:px-4 sm:py-3 text-right text-slate-400">-</td><td class="p-3 sm:px-4 sm:py-3 text-right text-slate-400">-</td><td class="p-3 sm:px-4 sm:py-3 text-right text-slate-400 bg-blue-50/30">-</td><td class="p-3 sm:px-4 sm:py-3 text-right font-bold text-slate-800">${log.gula?.akhir || 0}</td></tr>
                                     </tbody>
@@ -975,7 +1026,7 @@
                         <div class="grid grid-cols-2 gap-3 no-capture">
                             <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center relative">
                                 <i data-lucide="filter" class="text-blue-500 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
-                                <input list="weeks-recap" id="week-filter-recap" class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-slate-400" placeholder="Ketik/Pilih Minggu..." value="${filters.week === 'all' || filters.week === 'Semua' ? 'Semua' : filters.week}" onchange="Handlers.autoFilterWeek('recap', this.value)" />
+                                <input list="weeks-recap" id="week-filter-recap" class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-slate-400" placeholder="Ketik/Pilih Minggu..." value="${filters.week === 'all' || filters.week === 'Semua' ? 'Semua' : filters.week}" onchange="Handlers.autoFilterWeek('recap', this.value)" onclick="this.value=''" />
                                 <datalist id="weeks-recap">
                                     <option value="Semua">Semua Minggu</option>
                                     ${availableWeeks.map(w => `<option value="${w}">Minggu Ke-${w}</option>`).join('')}
@@ -1094,7 +1145,7 @@
                         <div class="grid grid-cols-2 gap-3 mb-5">
                             <div class="bg-slate-50 rounded-xl p-1 border border-slate-200 flex items-center relative">
                                 <i data-lucide="filter" class="text-blue-500 ml-2 mr-1 shrink-0" style="width: 14px; height: 14px;"></i>
-                                <input list="weeks-bulky" id="week-filter-bulky" class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-slate-400" placeholder="Ketik/Pilih Minggu..." value="${filters.week === 'all' || filters.week === 'Semua' ? 'Semua' : filters.week}" onchange="Handlers.autoFilterWeek('bulky', this.value)" />
+                                <input list="weeks-bulky" id="week-filter-bulky" class="w-full bg-transparent text-slate-800 text-xs sm:text-sm font-bold py-2 pr-2 outline-none placeholder-slate-400" placeholder="Ketik/Pilih Minggu..." value="${filters.week === 'all' || filters.week === 'Semua' ? 'Semua' : filters.week}" onchange="Handlers.autoFilterWeek('bulky', this.value)" onclick="this.value=''" />
                                 <datalist id="weeks-bulky">
                                     <option value="Semua">Semua Minggu</option>
                                     ${availableWeeks.map(w => `<option value="${w}">Minggu Ke-${w}</option>`).join('')}
@@ -1181,24 +1232,20 @@
                 let results = [];
                 let hasFiltered = false;
                 
-                // Cari berdasar filter waktu (Tanggal atau Bulan) dan Shift
                 if (filters.date || filters.month) {
                     hasFiltered = true;
                     let targetLogs = app.state.db.opnameLogs || [];
                     
-                    // Filter berdasarkan waktu (Bulan akan timpa Tanggal jika diisi)
                     if (filters.month) {
                         targetLogs = targetLogs.filter(log => log.tanggal.startsWith(filters.month));
                     } else if (filters.date) {
                         targetLogs = targetLogs.filter(log => log.tanggal === filters.date);
                     }
                     
-                    // Filter berdasarkan Shift
                     if (filters.shift && filters.shift !== 'all') {
                         targetLogs = targetLogs.filter(log => String(log.shift) === String(filters.shift));
                     }
                     
-                    // Proses Log Opname yang sesuai
                     targetLogs.forEach(opnameLog => {
                         const dateStr = formatDate(opnameLog.tanggal);
                         const dayName = getDayName(opnameLog.tanggal);
@@ -1210,7 +1257,6 @@
                                 const pakai = calcPakai(siloData.awal, totalMasuk, siloData.akhir);
                                 
                                 if (pakai > 0 || totalMasuk > 0) {
-                                    // Temukan apakah ada bulky terbaru yang sesuai dengan merk ini (Kedatangan <= Tgl Opname)
                                     let relatedBulky = null;
                                     const matchingBulkyLogs = (app.state.db.bulkyLogs || []).filter(b => {
                                         return b.merk && b.merk.toLowerCase() === siloData.merk.toLowerCase() && 
@@ -1218,7 +1264,7 @@
                                     }).sort((a, b) => new Date(b.tanggalKedatangan || b.tanggal) - new Date(a.tanggalKedatangan || a.tanggal));
                                     
                                     if (matchingBulkyLogs.length > 0) {
-                                        relatedBulky = matchingBulkyLogs[0]; // Ambil yang paling baru sebelum/pada saat dipakai
+                                        relatedBulky = matchingBulkyLogs[0];
                                     }
                                     
                                     results.push({
@@ -1229,6 +1275,7 @@
                                         siloName: siloKey.replace('silo', 'Silo ').toUpperCase(),
                                         merk: siloData.merk,
                                         pakai: pakai,
+                                        linesUsed: parseLines(siloData.lines).join(', '),
                                         relatedBulky: relatedBulky
                                     });
                                 }
@@ -1236,7 +1283,6 @@
                         });
                     });
                     
-                    // Urutkan dari terbaru
                     results.sort((a, b) => new Date(b.opnameDate) - new Date(a.opnameDate));
                 }
 
@@ -1298,6 +1344,8 @@
                                                 ${Components.Badge(res.merk, 'slate')}
                                             </div>
                                             
+                                            ${res.linesUsed ? `<div class="mb-2"><span class="block text-[8px] text-slate-400 font-bold uppercase mb-0.5">Line Pakai</span><span class="font-bold text-slate-700 text-[11px]">${res.linesUsed}</span></div>` : ''}
+
                                             ${res.relatedBulky ? `
                                                 <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-200/60">
                                                     <div><span class="block text-[8px] text-slate-400 font-bold uppercase mb-0.5">Sumber</span><span class="font-bold text-blue-600 text-[11px] flex items-center gap-1"><i data-lucide="truck" style="width:12px;height:12px"></i> Bulky</span></div>
@@ -1407,37 +1455,28 @@
                 window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
             },
 
-            // Updated Fix Visual Dashboard Share: Mencegah terpotong dan buram
             shareDashboardImage: async () => {
                 app.showGlobalMessage('Menyiapkan gambar HD...', false);
                 const originalEl = document.getElementById('dashboard-capture-area');
                 if(!originalEl) return;
                 
-                // Sembunyikan tombol
                 const ignoreEls = originalEl.querySelectorAll('.no-capture');
                 ignoreEls.forEach(e => e.style.display = 'none');
                 
-                // Kloning area untuk dirender
                 const cloneEl = originalEl.cloneNode(true);
-                
-                // Kembalikan tombol di UI asli
                 ignoreEls.forEach(e => e.style.display = ''); 
                 
-                // Tampilkan header di hasil kloning
                 const headerEl = cloneEl.querySelector('.capture-header');
                 if (headerEl) headerEl.style.display = 'block';
-
-                // Hapus tombol dari hasil kloning
                 const cloneIgnoreEls = cloneEl.querySelectorAll('.no-capture');
                 cloneIgnoreEls.forEach(e => e.remove());
 
-                // Setup wrapper (Diposisikan fixed agar berada di viewport virtual)
                 const wrapper = document.createElement('div');
                 wrapper.style.position = 'fixed'; 
                 wrapper.style.top = '0';
                 wrapper.style.left = '-9999px'; 
                 wrapper.style.width = '800px'; 
-                wrapper.style.height = 'max-content'; // Memaksa wadah meluas ke bawah
+                wrapper.style.height = 'max-content'; 
                 wrapper.style.backgroundColor = '#F4F7F9';
                 wrapper.style.padding = '30px';
                 wrapper.style.boxSizing = 'border-box';
@@ -1445,35 +1484,20 @@
                 
                 cloneEl.classList.remove('animate-fade-in');
                 
-                // Modifikasi CSS pada kloningan agar tidak memotong isi
                 const allNodes = cloneEl.querySelectorAll('*');
                 allNodes.forEach(node => {
                     node.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
                     node.style.animation = 'none';
                     node.style.transition = 'none';
-                    
-                    // Hilangkan paksaan tinggi agar menyesuaikan isi (mencegah kepotong vertikal)
                     if (node.classList.contains('h-full')) {
-                        node.classList.remove('h-full');
-                        node.style.height = '100%'; 
-                        node.style.minHeight = 'max-content';
+                        node.classList.remove('h-full'); node.style.height = '100%'; node.style.minHeight = 'max-content';
                     }
-                    
-                    // Cegah pemotongan teks horizontal
                     if (node.classList.contains('truncate')) {
-                        node.classList.remove('truncate');
-                        node.style.whiteSpace = 'normal';
-                        node.style.wordBreak = 'break-word';
+                        node.classList.remove('truncate'); node.style.whiteSpace = 'normal'; node.style.wordBreak = 'break-word';
                     }
-                    
-                    // Buat latar belakang solid agar warna lebih tajam
                     if (node.classList.contains('bg-white/90') || node.classList.contains('bg-white/80')) {
-                        node.classList.remove('bg-white/90', 'bg-white/80');
-                        node.classList.add('bg-white');
-                        node.style.backgroundColor = '#ffffff';
+                        node.classList.remove('bg-white/90', 'bg-white/80'); node.classList.add('bg-white'); node.style.backgroundColor = '#ffffff';
                     }
-                    
-                    // Hapus limit overflow (kecuali untuk efek tabung silo)
                     if (node.classList.contains('overflow-hidden') && !node.classList.contains('silo-glass') && !node.id.includes('layout')) {
                         node.classList.remove('overflow-hidden');
                     }
@@ -1483,23 +1507,21 @@
                 document.body.appendChild(wrapper);
                 
                 try {
-                    // Tunggu font siap & DOM teregistrasi dengan baik
                     await document.fonts.ready;
                     await new Promise(resolve => setTimeout(resolve, 600)); 
 
                     const canvas = await html2canvas(wrapper, { 
-                        scale: 2.5, // Resolusi HD
+                        scale: 2.5, 
                         useCORS: true, 
                         backgroundColor: '#F4F7F9',
                         windowWidth: 800,
-                        windowHeight: wrapper.scrollHeight + 100, // Tambahan ekstra 100px agar aman tidak kepotong
+                        windowHeight: wrapper.scrollHeight + 100, 
                         logging: false
                     });
                     
                     const imgDataUrl = canvas.toDataURL('image/jpeg', 0.95);
                     document.body.removeChild(wrapper);
                     
-                    // Buat Teks WA
                     const { shift, date } = getCurrentShiftInfo();
                     let msg = `*LAPORAN VISUAL STOK MHS*\nHari/Tanggal : ${getDayName(date)}, ${formatDate(date)}\nShift berjalan : ${shift}\n\n`;
                     const s = app.state.db.lastStock;
@@ -1588,7 +1610,7 @@
                 fData[siloKey][field] = value;
                 if (field === 'merk' && (siloKey.startsWith('silo') || siloKey === 'tapioka')) {
                     const customContainer = document.getElementById(`sf-${siloKey}-customMerk-container`);
-                    if (customContainer) customContainer.className = value === 'LAINNYA' ? 'block' : 'hidden sm:block';
+                    if (customContainer) customContainer.className = value === 'LAINNYA' ? 'block mb-4' : 'hidden sm:block';
                 }
                 if (['awal', 'masuk', 'masukZak', 'masukBulky', 'akhir'].includes(field)) {
                     const pemakaianLabel = document.getElementById(`pemakaian-${siloKey}`);
@@ -1597,6 +1619,25 @@
                         pemakaianLabel.innerText = calcPakai(fData[siloKey].awal, totalMasuk, fData[siloKey].akhir);
                     }
                 }
+            },
+
+            toggleLine: (siloKey, line) => {
+                const fData = app.state.stockForm;
+                let current = parseLines(fData[siloKey].lines);
+                const idx = current.indexOf(line);
+                if (idx > -1) current.splice(idx, 1);
+                else current.push(line);
+                fData[siloKey].lines = current;
+                app.renderActiveTab();
+            },
+
+            selectAllLines: (siloKey) => {
+                const fData = app.state.stockForm;
+                const all = SILO_LINES[siloKey];
+                let current = parseLines(fData[siloKey].lines);
+                if (current.length === all.length) fData[siloKey].lines = [];
+                else fData[siloKey].lines = [...all];
+                app.renderActiveTab();
             },
 
             saveStockForm: async (e) => {
@@ -1678,49 +1719,50 @@
                 const getSiloStr = (name, type, data) => {
                     const totalMasuk = (Number(data.masukZak) || 0) + (Number(data.masukBulky) || 0);
                     const pakai = calcPakai(data.awal, totalMasuk, data.akhir);
+                    const lines = parseLines(data.lines).join(', ');
+
                     let str = `*${name}* : *Terigu ${type} ${data.merk === 'LAINNYA' ? data.customMerk : data.merk}*\nStock awal : ${data.awal} kg\n`;
                     let arrPemasukan = [];
                     if (data.masukZak) arrPemasukan.push(`Zak: ${data.masukZak}kg`);
                     if (data.masukBulky) arrPemasukan.push(`Bulky: ${data.masukBulky}kg`);
                     let pmsStr = arrPemasukan.length > 0 ? arrPemasukan.join(' | ') : '-';
-                    str += `Pemasukan : ${pmsStr}${totalMasuk > 0 && data.gluten ? ' (Gluten: '+data.gluten+'%)' : ''}\nPemakaian : ${pakai} kg\nStock Akhir : ${data.akhir || data.awal} kg\n`;
+                    str += `Pemasukan : ${pmsStr}${totalMasuk > 0 && data.gluten ? ' (Gluten: '+data.gluten+'%)' : ''}\nPemakaian : ${pakai} kg\n`;
+                    if (lines) str += `Line Pakai : ${lines}\n`;
+                    str += `Stock Akhir : ${data.akhir || data.awal} kg\n`;
                     return str;
                 };
 
                 let msg = `*LAPORAN OPNAME & SERAH TERIMA*\nHari : ${hari}, ${tgl}\nShift : ${d.shift}\n\n`;
                 msg += getSiloStr('Silo 1', 'medium', d.silo1) + '\n' + getSiloStr('Silo 2', 'soft', d.silo2) + '\n' + getSiloStr('Silo 3', 'soft', d.silo3) + '\n' + getSiloStr('Silo 4', 'medium', d.silo4) + '\n';
-                msg += `*Mini Silo Tapioka (${d.tapioka.merk})*\nAwal : ${d.tapioka.awal} kg | Masuk : ${d.tapioka.masuk || '-'} kg\nPakai: ${calcPakai(d.tapioka.awal, d.tapioka.masuk, d.tapioka.akhir)} kg | Akhir : ${d.tapioka.akhir || d.tapioka.awal} kg\n\n`;
+                
+                const linesTap = parseLines(d.tapioka.lines).join(', ');
+                msg += `*Mini Silo Tapioka (${d.tapioka.merk})*\nAwal : ${d.tapioka.awal} kg | Masuk : ${d.tapioka.masuk || '-'} kg\nPakai: ${calcPakai(d.tapioka.awal, d.tapioka.masuk, d.tapioka.akhir)} kg\n`;
+                if(linesTap) msg += `Line Pakai : ${linesTap}\n`;
+                msg += `Akhir : ${d.tapioka.akhir || d.tapioka.awal} kg\n\n`;
+                
                 msg += `*GULA MESH 30 (${d.gula.merk}) : ${d.gula.akhir || '-'} kg*\n\n`;
+                
                 if (d.catatanOpname.trim() !== '') msg += `*Catatan Opname:*\n${d.catatanOpname}\n\n`;
                 msg += `*Catatan Handover ke Shift ${d.shift === '3' ? '1' : String(Number(d.shift) + 1)}:*\n`;
                 const notes = d.serahTerima.filter(n => n.trim() !== '');
                 if(notes.length > 0) notes.forEach((catatan, i) => msg += `${i + 1}. ${catatan}\n`);
                 else msg += `- Aman\n`;
+                
                 window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
             },
 
-            // Updated Filter Autofocus Function
             autoFilterWeek: (tab, val) => {
                 const filters = app.state[`${tab}Filters`];
                 filters.week = (val === '' || val.toLowerCase() === 'semua') ? 'Semua' : val;
                 app.renderActiveTab();
-                
-                setTimeout(() => {
-                    const id = tab === 'recap' ? 'week-filter-recap' : 'week-filter-bulky';
-                    const el = document.getElementById(id);
-                    if(el) {
-                        el.focus();
-                        if(el.setSelectionRange) { el.setSelectionRange(el.value.length, el.value.length); }
-                    }
-                }, 10);
             },
             
             updateTraceFilter: (field, value) => {
                 app.state.traceFilters[field] = value;
                 if (field === 'month' && value) {
-                    app.state.traceFilters.date = ''; // Reset tanggal jika bulan diisi
+                    app.state.traceFilters.date = ''; 
                 } else if (field === 'date' && value) {
-                    app.state.traceFilters.month = ''; // Reset bulan jika tanggal diisi
+                    app.state.traceFilters.month = '';
                 }
                 app.renderActiveTab();
             },
@@ -1780,6 +1822,15 @@
                             if(z > 0 || b > 0) return `${z+b} <span style="font-size:10px; color:#64748b;">(Z:${z}, B:${b})</span>`;
                             if(oldM > 0) return oldM; return '-';
                         };
+
+                        const l1 = parseLines(log.silo1?.lines).join(', ');
+                        const lStr1 = l1 ? `<span style="font-size:9px; color:#3b82f6; font-weight:bold; display:block;">Line: ${l1}</span>` : '';
+                        const l2 = parseLines(log.silo2?.lines).join(', ');
+                        const lStr2 = l2 ? `<span style="font-size:9px; color:#3b82f6; font-weight:bold; display:block;">Line: ${l2}</span>` : '';
+                        const l3 = parseLines(log.silo3?.lines).join(', ');
+                        const lStr3 = l3 ? `<span style="font-size:9px; color:#3b82f6; font-weight:bold; display:block;">Line: ${l3}</span>` : '';
+                        const l4 = parseLines(log.silo4?.lines).join(', ');
+                        const lStr4 = l4 ? `<span style="font-size:9px; color:#3b82f6; font-weight:bold; display:block;">Line: ${l4}</span>` : '';
                         
                         html += `
                         <div style="margin-bottom: 25px;">
@@ -1791,10 +1842,10 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 1 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo1?.merk || '-'}</span></td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo1?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo1)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo1?.awal, getTotalM(log.silo1), log.silo1?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo1?.akhir || 0}</td></tr>
-                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 2 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo2?.merk || '-'}</span></td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo2?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo2)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo2?.awal, getTotalM(log.silo2), log.silo2?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo2?.akhir || 0}</td></tr>
-                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 3 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo3?.merk || '-'}</span></td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo3?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo3)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo3?.awal, getTotalM(log.silo3), log.silo3?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo3?.akhir || 0}</td></tr>
-                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 4 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo4?.merk || '-'}</span></td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo4?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo4)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo4?.awal, getTotalM(log.silo4), log.silo4?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo4?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 1 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo1?.merk || '-'}</span>${lStr1}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo1?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo1)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo1?.awal, getTotalM(log.silo1), log.silo1?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo1?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 2 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo2?.merk || '-'}</span>${lStr2}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo2?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo2)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo2?.awal, getTotalM(log.silo2), log.silo2?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo2?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 3 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo3?.merk || '-'}</span>${lStr3}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo3?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo3)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo3?.awal, getTotalM(log.silo3), log.silo3?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo3?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 4 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo4?.merk || '-'}</span>${lStr4}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo4?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo4)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo4?.awal, getTotalM(log.silo4), log.silo4?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo4?.akhir || 0}</td></tr>
                                     <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #b45309; background: #fffbeb;">Tapioka <span style="font-size:10px; color:#d97706; font-weight:normal; display:block;">${log.tapioka?.merk || '-'}</span></td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #fffbeb;">${log.tapioka?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #fffbeb;">${log.tapioka?.masuk || '-'}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb; background: #fffbeb;">${calcPakai(log.tapioka?.awal, log.tapioka?.masuk, log.tapioka?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; background: #fffbeb;">${log.tapioka?.akhir || 0}</td></tr>
                                     <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #4338ca; background: #eef2ff;">Gula <span style="font-size:10px; color:#6366f1; font-weight:normal; display:block;">${log.gula?.merk || '-'}</span></td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; background: #eef2ff;">${log.gula?.akhir || 0}</td></tr>
                                 </tbody>
@@ -1837,12 +1888,22 @@
                 let csv = "Tanggal,Shift,Silo 1 Merk,S1 Awal,S1 Masuk Zak,S1 Masuk Bulky,S1 Pemakaian,S1 Akhir,Silo 2 Merk,S2 Awal,S2 Masuk Zak,S2 Masuk Bulky,S2 Pemakaian,S2 Akhir,Silo 3 Merk,S3 Awal,S3 Masuk Zak,S3 Masuk Bulky,S3 Pemakaian,S3 Akhir,Silo 4 Merk,S4 Awal,S4 Masuk Zak,S4 Masuk Bulky,S4 Pemakaian,S4 Akhir,Tapioka Merk,Tap Awal,Tap Masuk,Tap Pemakaian,Tap Akhir,Gula Merk,Gula Akhir,Catatan\n";
                 filteredLogs.forEach(log => {
                     const calcP = (awal, mZak, mBulky, m, akhir) => calcPakai(awal, (Number(mZak)||0)+(Number(mBulky)||0)+(Number(m)||0), akhir);
+                    
+                    const l1 = parseLines(log.silo1?.lines).join(', ');
+                    const m1 = log.silo1?.merk + (l1 ? ` (Line: ${l1})` : '');
+                    const l2 = parseLines(log.silo2?.lines).join(', ');
+                    const m2 = log.silo2?.merk + (l2 ? ` (Line: ${l2})` : '');
+                    const l3 = parseLines(log.silo3?.lines).join(', ');
+                    const m3 = log.silo3?.merk + (l3 ? ` (Line: ${l3})` : '');
+                    const l4 = parseLines(log.silo4?.lines).join(', ');
+                    const m4 = log.silo4?.merk + (l4 ? ` (Line: ${l4})` : '');
+
                     const row = [
                         log.tanggal, log.shift,
-                        log.silo1?.merk || '', log.silo1?.awal || 0, log.silo1?.masukZak || 0, log.silo1?.masukBulky || 0, calcP(log.silo1?.awal, log.silo1?.masukZak, log.silo1?.masukBulky, log.silo1?.masuk, log.silo1?.akhir), log.silo1?.akhir || 0,
-                        log.silo2?.merk || '', log.silo2?.awal || 0, log.silo2?.masukZak || 0, log.silo2?.masukBulky || 0, calcP(log.silo2?.awal, log.silo2?.masukZak, log.silo2?.masukBulky, log.silo2?.masuk, log.silo2?.akhir), log.silo2?.akhir || 0,
-                        log.silo3?.merk || '', log.silo3?.awal || 0, log.silo3?.masukZak || 0, log.silo3?.masukBulky || 0, calcP(log.silo3?.awal, log.silo3?.masukZak, log.silo3?.masukBulky, log.silo3?.masuk, log.silo3?.akhir), log.silo3?.akhir || 0,
-                        log.silo4?.merk || '', log.silo4?.awal || 0, log.silo4?.masukZak || 0, log.silo4?.masukBulky || 0, calcP(log.silo4?.awal, log.silo4?.masukZak, log.silo4?.masukBulky, log.silo4?.masuk, log.silo4?.akhir), log.silo4?.akhir || 0,
+                        m1, log.silo1?.awal || 0, log.silo1?.masukZak || 0, log.silo1?.masukBulky || 0, calcP(log.silo1?.awal, log.silo1?.masukZak, log.silo1?.masukBulky, log.silo1?.masuk, log.silo1?.akhir), log.silo1?.akhir || 0,
+                        m2, log.silo2?.awal || 0, log.silo2?.masukZak || 0, log.silo2?.masukBulky || 0, calcP(log.silo2?.awal, log.silo2?.masukZak, log.silo2?.masukBulky, log.silo2?.masuk, log.silo2?.akhir), log.silo2?.akhir || 0,
+                        m3, log.silo3?.awal || 0, log.silo3?.masukZak || 0, log.silo3?.masukBulky || 0, calcP(log.silo3?.awal, log.silo3?.masukZak, log.silo3?.masukBulky, log.silo3?.masuk, log.silo3?.akhir), log.silo3?.akhir || 0,
+                        m4, log.silo4?.awal || 0, log.silo4?.masukZak || 0, log.silo4?.masukBulky || 0, calcP(log.silo4?.awal, log.silo4?.masukZak, log.silo4?.masukBulky, log.silo4?.masuk, log.silo4?.akhir), log.silo4?.akhir || 0,
                         log.tapioka?.merk || '', log.tapioka?.awal || 0, log.tapioka?.masuk || 0, calcP(log.tapioka?.awal, 0, 0, log.tapioka?.masuk, log.tapioka?.akhir), log.tapioka?.akhir || 0,
                         log.gula?.merk || '', log.gula?.akhir || 0, `"${(log.catatanOpname || '').replace(/"/g, '""')}"`
                     ];
@@ -2023,7 +2084,6 @@
 
         window.onload = () => {
             app.render();
-            // Lakukan sinkronisasi data (tarik data terbaru) di latar belakang jika user sudah login
             if (app.state.user) {
                 app.fetchData();
             }
