@@ -1,4 +1,7 @@
-ajemen Operasional MHS",
+{
+"short_name": "MHS Pro",
+"name": "MHS Pro - Smart Operations",
+"description": "Aplikasi Manajemen Operasional MHS",
 "icons": [
 {
 "src": "icon-192.png",
