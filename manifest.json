@@ -1,22 +1,19 @@
-{
-"short_name": "MHS Pro",
-"name": "MHS Pro - Smart Operations",
-"description": "Aplikasi Manajemen Operasional MHS",
+ajemen Operasional MHS",
 "icons": [
 {
 "src": "icon-192.png",
 "type": "image/png",
 "sizes": "192x192",
-"purpose": "any maskable"
+"purpose": "any"
 },
 {
 "src": "icon-512.png",
 "type": "image/png",
 "sizes": "512x512",
-"purpose": "any maskable"
+"purpose": "maskable"
 }
 ],
-"start_url": "./index.html",
+"start_url": ".",
 "display": "standalone",
 "orientation": "portrait",
 "theme_color": "#0B1B3D",
