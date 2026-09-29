@@ -904,7 +904,7 @@
                     const matchingBulky = app.state.db.bulkyLogs?.filter(b => formatDateToYYYYMMDD(b.tanggal) === opnameDate && String(b.shift) === String(shift)) || [];
                     
                     opnameBulkyModalHtml = `
-                    <div class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 animate-fade-in" onclick="Handlers.closeOpnameBulkyModal()">
+                    <div class="fixed inset-0 z-[100] flex items-start justify-center bg-slate-900/60 backdrop-blur-sm p-2 pt-12 sm:p-4 sm:pt-16 animate-fade-in" onclick="Handlers.closeOpnameBulkyModal()">
                         <div class="bg-[#F4F7F9] w-full max-w-lg rounded-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
                             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-white sticky top-0 z-10">
                                 <div>
@@ -1085,7 +1085,7 @@
                 if (app.state.selectedMerkRecap && recapData[app.state.selectedMerkRecap]) {
                     const selMerk = app.state.selectedMerkRecap;
                     modalHtml = `
-                    <div class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-2 sm:p-4 animate-fade-in" onclick="Handlers.closeBulkyModal()">
+                    <div class="fixed inset-0 z-[100] flex items-start justify-center bg-slate-900/60 backdrop-blur-sm p-2 pt-12 sm:p-4 sm:pt-16 animate-fade-in" onclick="Handlers.closeBulkyModal()">
                         <div class="bg-[#F4F7F9] w-full max-w-lg rounded-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
                             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-white sticky top-0 z-10">
                                 <h3 class="font-black text-slate-800 text-lg flex items-center gap-2"><i data-lucide="truck" class="text-blue-600" style="width: 18px; height: 18px;"></i> Rincian: ${selMerk}</h3>
@@ -1196,10 +1196,23 @@
                                 ${Components.ModernSelect({ id: 'bf-shift', label: 'Shift Bongkar *', value: fData.shift, options: ['1', '2', '3'], onChange: "app.state.bulkyForm.shift = this.value", required: true })}
                                 ${Components.FloatingInput({ id: 'bf-noBulky', label: "No Kendaraan / No Bulky", value: fData.noBulky, required: true, onInput: "app.state.bulkyForm.noBulky = this.value" })}
                             </div>
+                            
+                            <!-- Dropdown Merk dengan Datalist untuk Autocomplete / Filter -->
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                                ${Components.FloatingInput({ id: 'bf-merk', label: "Merk Terigu", value: fData.merk, required: true, onInput: "app.state.bulkyForm.merk = this.value" })}
+                                <div class="relative group w-full mb-4">
+                                    <input type="text" list="bf-merk-options" id="bf-merk" value="${fData.merk}" oninput="app.state.bulkyForm.merk = this.value" required placeholder=" " class="block w-full px-4 pt-6 pb-2 text-base font-medium text-slate-900 bg-white border border-slate-200 rounded-2xl appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all peer shadow-sm" />
+                                    <label class="absolute text-[11px] font-bold text-slate-400 uppercase tracking-wider duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] left-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 peer-focus:text-blue-600 ${fData.merk ? 'scale-75 -translate-y-3' : ''}">Merk Terigu *</label>
+                                    <datalist id="bf-merk-options">
+                                        <option value="W3"></option>
+                                        <option value="B7"></option>
+                                        <option value="LM"></option>
+                                        <option value="MILA"></option>
+                                        <option value="FALCONILA"></option>
+                                    </datalist>
+                                </div>
                                 ${Components.ModernSelect({ id: 'bf-tujuanSilo', label: "Tujuan Silo *", value: fData.tujuanSilo, required: true, options: ['Silo 1', 'Silo 2', 'Silo 3', 'Silo 4', 'LAINNYA / MIX'], onChange: "Handlers.updateBulkyTujuan(this.value)" })}
                             </div>
+                            
                             <div id="bf-customTujuan-container" class="${fData.tujuanSilo === 'LAINNYA / MIX' ? 'block' : 'hidden'} mb-4">
                                 ${Components.FloatingInput({ id: 'bf-customTujuan', label: "Ketik Tujuan Silo Custom", value: fData.customTujuanSilo, onInput: "app.state.bulkyForm.customTujuanSilo = this.value" })}
                             </div>
