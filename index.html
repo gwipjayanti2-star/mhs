@@ -5,28 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MHS Pro - Smart Operations</title>
     
-    <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0B1B3D">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="MHS Pro">
     
-    <!-- Favicon -->
     <link rel="icon" type="image/png" href="https://www.image2url.com/r2/default/files/1790301105424-7b6b60f2-4ebe-41f8-a0d1-384221bc41ad.png">
     <link rel="apple-touch-icon" href="https://www.image2url.com/r2/default/files/1790301105424-7b6b60f2-4ebe-41f8-a0d1-384221bc41ad.png">
 
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- Libraries for Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <style>
@@ -55,7 +46,6 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        /* Smooth scrolling for nav */
         .nav-scroll-container::-webkit-scrollbar { display: none; }
         .nav-scroll-container { -ms-overflow-style: none; scrollbar-width: none; }
         
@@ -74,17 +64,8 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbxnWOh6-FIn5v_kNalNsIi4QgZoRJ_6htXU_N0AWln2-nUWPTuEuRRwr9mjMCTB6TODdQ/exec";
         const DAYS_OF_WEEK = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
         
-        const SILO_MERK_OPTIONS = {
-            soft: ['B7', 'LM', 'MILA', 'FALCONILA', 'B7 MKL', 'LAINNYA'],
-            medium: ['W3', 'LAINNYA']
-        };
-
-        const SILO_LINES = {
-            silo1: ['2.1', '4.1'],
-            silo2: ['1.1', '3.1', '5.1', '2.1'],
-            silo3: ['1.1', '2.1', '3.1', '5.1', '4.2'],
-            silo4: ['2.2', '3.2', '5.2']
-        };
+        const SILO_MERK_OPTIONS = { soft: ['B7', 'LM', 'MILA', 'FALCONILA', 'B7 MKL', 'LAINNYA'], medium: ['W3', 'LAINNYA'] };
+        const SILO_LINES = { silo1: ['2.1', '4.1'], silo2: ['1.1', '3.1', '5.1', '2.1'], silo3: ['1.1', '2.1', '3.1', '5.1', '4.2'], silo4: ['2.2', '3.2', '5.2'] };
 
         const parseLines = (val) => {
             if (Array.isArray(val)) return val;
@@ -103,9 +84,7 @@
 
         const getRecentWeeks = (logs = []) => {
             const weeks = new Set();
-            logs.forEach(l => {
-                if(l.tanggal || l.timestamp) weeks.add(getWeekNumber(new Date(l.tanggal || l.timestamp)));
-            });
+            logs.forEach(l => { if(l.tanggal || l.timestamp) weeks.add(getWeekNumber(new Date(l.tanggal || l.timestamp))); });
             return Array.from(weeks).sort((a,b)=>b-a).slice(0,3);
         };
 
@@ -433,8 +412,9 @@
             },
 
             ModernSelect: (props) => {
-                const { id, label, value = '', options = [], required, onChange } = props;
+                const { id, label, value = '', options = [], required, disabled, onChange } = props;
                 const hasValueClass = value ? 'scale-75 -translate-y-3' : '';
+                const disabledClasses = disabled ? 'opacity-70 bg-slate-50 cursor-not-allowed text-slate-500 font-semibold' : '';
                 let optionsHtml = `<option value="" disabled ${!value ? 'selected' : ''} class="text-slate-400">Pilih...</option>`;
                 options.forEach(opt => {
                     const val = typeof opt === 'object' ? opt.value : opt;
@@ -444,8 +424,8 @@
 
                 return `
                 <div class="relative group w-full mb-4">
-                    <select id="${id}" ${required ? 'required' : ''} ${onChange ? `onchange="${onChange}"` : ''}
-                        class="block w-full px-4 pt-6 pb-2 text-base font-semibold text-slate-900 bg-white border border-slate-200 rounded-2xl appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all peer shadow-sm">
+                    <select id="${id}" ${required ? 'required' : ''} ${disabled ? 'disabled' : ''} ${onChange ? `onchange="${onChange}"` : ''}
+                        class="block w-full px-4 pt-6 pb-2 text-base font-semibold text-slate-900 bg-white border border-slate-200 rounded-2xl appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all peer shadow-sm ${disabledClasses}">
                         ${optionsHtml}
                     </select>
                     <label class="absolute text-[11px] font-bold text-slate-400 uppercase tracking-wider duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] left-4 peer-focus:text-blue-600 ${hasValueClass}">${label}</label>
@@ -693,6 +673,7 @@
                 if (!app.state.stockForm) {
                     app.state.stockForm = {
                         tanggal: autoDate, shift: autoShift,
+                        isExisting: false,
                         silo1: { merk: db.lastStock?.silo1?.merk || '', customMerk: '', awal: db.lastStock?.silo1?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
                         silo2: { merk: db.lastStock?.silo2?.merk || '', awal: db.lastStock?.silo2?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
                         silo3: { merk: db.lastStock?.silo3?.merk || '', awal: db.lastStock?.silo3?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
@@ -701,14 +682,16 @@
                         gula: { merk: db.lastStock?.gula?.merk || '', akhir: db.lastStock?.gula?.akhir || 0 },
                         catatanOpname: '', serahTerima: ['', '', '', '', '']
                     };
-                } else {
-                    app.state.stockForm.silo1.awal = db.lastStock?.silo1?.akhir || 0;
-                    app.state.stockForm.silo2.awal = db.lastStock?.silo2?.akhir || 0;
-                    app.state.stockForm.silo3.awal = db.lastStock?.silo3?.akhir || 0;
-                    app.state.stockForm.silo4.awal = db.lastStock?.silo4?.akhir || 0;
-                    app.state.stockForm.tapioka.awal = db.lastStock?.tapioka?.akhir || 0;
-                }
+                    
+                    const existingLog = db.opnameLogs?.find(log => log.tanggal === autoDate && String(log.shift) === String(autoShift));
+                    if (existingLog) {
+                        app.state.stockForm = JSON.parse(JSON.stringify(existingLog));
+                        app.state.stockForm.isExisting = true;
+                    }
+                } 
+                
                 const fData = app.state.stockForm;
+                const isDisabled = fData.isExisting;
 
                 const SiloSectionHTML = (title, type, siloKey, options) => {
                     const data = fData[siloKey];
@@ -722,13 +705,13 @@
                         const badges = lineOpts.map(l => {
                             const isSel = selLines.includes(l);
                             const cls = isSel ? 'bg-blue-500 text-white border-blue-600 shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50';
-                            return `<button type="button" onclick="Handlers.toggleLine('${siloKey}', '${l}')" class="px-3 py-1.5 rounded-lg border text-[10px] sm:text-xs font-black transition-all ${cls}">${l}</button>`;
+                            return `<button type="button" ${isDisabled ? 'disabled' : `onclick="Handlers.toggleLine('${siloKey}', '${l}')"`} class="px-3 py-1.5 rounded-lg border text-[10px] sm:text-xs font-black transition-all ${cls} ${isDisabled ? 'opacity-70 cursor-not-allowed' : ''}">${l}</button>`;
                         }).join('');
                         lineHTML = `
                             <div class="bg-slate-50/80 p-3 sm:p-4 rounded-2xl border border-slate-200/60 mb-5 shadow-inner">
                                 <div class="flex justify-between items-center mb-2.5">
                                     <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center"><i data-lucide="git-branch" class="mr-1.5" style="width: 14px; height: 14px;"></i> Aktual Pemakaian Line</p>
-                                    <button type="button" onclick="Handlers.selectAllLines('${siloKey}')" class="text-[9px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded-md border border-blue-100 transition-colors active:scale-95">Pilih Semua</button>
+                                    ${!isDisabled ? `<button type="button" onclick="Handlers.selectAllLines('${siloKey}')" class="text-[9px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded-md border border-blue-100 transition-colors active:scale-95">Pilih Semua</button>` : ''}
                                 </div>
                                 <div class="flex flex-wrap gap-2">
                                     ${badges}
@@ -747,18 +730,18 @@
                         </div>
                         
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                            ${Components.ModernSelect({ id: `sf-${siloKey}-merk`, label: "Merk Terigu", value: data.merk, options: options, onChange: `Handlers.updateStockForm('${siloKey}', 'merk', this.value)` })}
+                            ${Components.ModernSelect({ id: `sf-${siloKey}-merk`, label: "Merk Terigu", value: data.merk, options: options, disabled: isDisabled, onChange: `Handlers.updateStockForm('${siloKey}', 'merk', this.value)` })}
                             <div id="sf-${siloKey}-customMerk-container" class="${data.merk === 'LAINNYA' ? 'block' : 'hidden sm:block'}">
-                                ${data.merk === 'LAINNYA' ? Components.FloatingInput({ id: `sf-${siloKey}-customMerk`, label: "Ketik Merk", value: data.customMerk, onInput: `Handlers.updateStockForm('${siloKey}', 'customMerk', this.value)` }) : ''}
+                                ${data.merk === 'LAINNYA' ? Components.FloatingInput({ id: `sf-${siloKey}-customMerk`, label: "Ketik Merk", value: data.customMerk, disabled: isDisabled, onInput: `Handlers.updateStockForm('${siloKey}', 'customMerk', this.value)` }) : ''}
                             </div>
                         </div>
 
                         <div class="bg-slate-50/80 p-3 sm:p-4 rounded-2xl border border-slate-200/60 mb-5 shadow-inner">
                             <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center"><i data-lucide="download" class="mr-1.5" style="width: 14px; height: 14px;"></i> Pemasukan Shift</p>
                             <div class="grid grid-cols-2 gap-3">
-                                ${Components.FloatingInput({ id: `sf-${siloKey}-masukZak`, label: "Jml Masuk Zak", type: "number", suffix: "kg", value: data.masukZak, onInput: `Handlers.updateStockForm('${siloKey}', 'masukZak', this.value)` })}
-                                ${Components.FloatingInput({ id: `sf-${siloKey}-masukBulky`, label: "Jml Masuk Bulky", type: "number", suffix: "kg", value: data.masukBulky, onInput: `Handlers.updateStockForm('${siloKey}', 'masukBulky', this.value)` })}
-                                <div class="col-span-2">${Components.FloatingInput({ id: `sf-${siloKey}-gluten`, label: "Gluten % (Jika ada pemasukan)", type: "number", step: "0.1", suffix: "%", value: data.gluten, onInput: `Handlers.updateStockForm('${siloKey}', 'gluten', this.value)` })}</div>
+                                ${Components.FloatingInput({ id: `sf-${siloKey}-masukZak`, label: "Jml Masuk Zak", type: "number", suffix: "kg", value: data.masukZak, disabled: isDisabled, onInput: `Handlers.updateStockForm('${siloKey}', 'masukZak', this.value)` })}
+                                ${Components.FloatingInput({ id: `sf-${siloKey}-masukBulky`, label: "Jml Masuk Bulky", type: "number", suffix: "kg", value: data.masukBulky, disabled: isDisabled, onInput: `Handlers.updateStockForm('${siloKey}', 'masukBulky', this.value)` })}
+                                <div class="col-span-2">${Components.FloatingInput({ id: `sf-${siloKey}-gluten`, label: "Gluten % (Jika ada pemasukan)", type: "number", step: "0.1", suffix: "%", value: data.gluten, disabled: isDisabled, onInput: `Handlers.updateStockForm('${siloKey}', 'gluten', this.value)` })}</div>
                             </div>
                         </div>
 
@@ -766,7 +749,7 @@
 
                         <div class="grid grid-cols-2 gap-3 items-start mb-5">
                             ${Components.FloatingInput({ label: "Stock Awal", type: "number", suffix: "kg", value: data.awal, disabled: true })}
-                            ${Components.FloatingInput({ id: `sf-${siloKey}-akhir`, label: "Stock Akhir *", type: "number", suffix: "kg", value: data.akhir, required: true, onInput: `Handlers.updateStockForm('${siloKey}', 'akhir', this.value)` })}
+                            ${Components.FloatingInput({ id: `sf-${siloKey}-akhir`, label: "Stock Akhir *", type: "number", suffix: "kg", value: data.akhir, required: true, disabled: isDisabled, onInput: `Handlers.updateStockForm('${siloKey}', 'akhir', this.value)` })}
                         </div>
 
                         <div class="flex justify-between items-center bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-lg relative overflow-hidden">
@@ -783,22 +766,32 @@
                         <div class="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
                         <div class="relative z-10">
                             <div class="flex justify-between items-center mb-5 sm:mb-6">
-                                <div><h2 class="text-xl sm:text-2xl font-black mb-1 tracking-tight">Opname Harian</h2><p class="text-[10px] sm:text-xs text-blue-200 font-bold uppercase tracking-widest flex items-center"><i data-lucide="clock" class="mr-1.5" style="width: 12px; height: 12px;"></i> Data Shift Berjalan</p></div>
+                                <div><h2 class="text-xl sm:text-2xl font-black mb-1 tracking-tight">Opname Harian</h2><p class="text-[10px] sm:text-xs text-blue-200 font-bold uppercase tracking-widest flex items-center"><i data-lucide="clock" class="mr-1.5" style="width: 12px; height: 12px;"></i> Pilih Data Shift</p></div>
                             </div>
-                            <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-5">
+                            <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-2">
                                 <div class="bg-black/20 p-3 rounded-xl sm:rounded-2xl backdrop-blur-sm border border-white/10">
                                     <label class="block text-[9px] font-black text-blue-200 mb-1 sm:mb-1.5 uppercase tracking-widest">Tanggal</label>
-                                    <input type="date" id="sf-tanggal" value="${fData.tanggal}" onchange="app.state.stockForm.tanggal = this.value" class="w-full bg-transparent text-white text-sm sm:text-base font-bold outline-none custom-date-input" />
+                                    <input type="date" id="sf-tanggal" value="${fData.tanggal}" onchange="app.state.stockForm.tanggal = this.value; Handlers.checkExistingOpname();" class="w-full bg-transparent text-white text-sm sm:text-base font-bold outline-none custom-date-input" />
                                 </div>
                                 <div class="bg-black/20 p-3 rounded-xl sm:rounded-2xl backdrop-blur-sm border border-white/10">
                                     <label class="block text-[9px] font-black text-blue-200 mb-1 sm:mb-1.5 uppercase tracking-widest">Shift</label>
-                                    <select id="sf-shift" onchange="app.state.stockForm.shift = this.value" class="w-full bg-transparent text-white text-sm sm:text-base font-bold outline-none appearance-none">
+                                    <select id="sf-shift" onchange="app.state.stockForm.shift = this.value; Handlers.checkExistingOpname();" class="w-full bg-transparent text-white text-sm sm:text-base font-bold outline-none appearance-none">
                                         <option value="1" class="text-slate-800" ${fData.shift === '1' ? 'selected' : ''}>Shift 1</option><option value="2" class="text-slate-800" ${fData.shift === '2' ? 'selected' : ''}>Shift 2</option><option value="3" class="text-slate-800" ${fData.shift === '3' ? 'selected' : ''}>Shift 3</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
                     `, 'bg-gradient-to-br from-blue-600 to-[#0B1B3D] text-white border-none relative overflow-hidden shadow-xl shadow-blue-900/20', 'p-5 sm:p-6')}
+
+                    ${fData.isExisting ? `
+                        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3.5 rounded-2xl flex items-start shadow-sm animate-scale-in">
+                            <i data-lucide="check-circle-2" class="mr-3 shrink-0 mt-0.5 text-emerald-500" style="width: 20px; height: 20px;"></i>
+                            <div>
+                                <h4 class="font-black text-sm tracking-tight">Data Opname Tersimpan!</h4>
+                                <p class="text-xs font-semibold mt-0.5 text-emerald-700/80 leading-relaxed">Data untuk tanggal dan shift ini sudah ada di sistem. Anda dapat membagikan laporannya via WhatsApp di bawah.</p>
+                            </div>
+                        </div>
+                    ` : ''}
 
                     <form onsubmit="Handlers.saveStockForm(event)">
                         ${SiloSectionHTML("Silo 1", "Medium", "silo1", SILO_MERK_OPTIONS.medium)}
@@ -809,11 +802,11 @@
                         ${Components.Card(`
                             <h3 class="font-black text-slate-800 text-lg sm:text-lg mb-4 sm:mb-5 flex items-center border-b border-slate-100 pb-3 sm:pb-4"><div class="p-2 sm:p-2.5 bg-amber-100 text-amber-700 rounded-xl mr-3"><i data-lucide="box" stroke-width="2.5" style="width: 18px; height: 18px;"></i></div> Mini Silo Tapioka</h3>
                             <div class="grid grid-cols-1 gap-3 mb-4 sm:mb-5">
-                                ${Components.FloatingInput({ id: 'sf-tapioka-merk', label: "Merk Tapioka", value: fData.tapioka.merk, onInput: "app.state.stockForm.tapioka.merk = this.value", required: true })}
+                                ${Components.FloatingInput({ id: 'sf-tapioka-merk', label: "Merk Tapioka", value: fData.tapioka.merk, disabled: isDisabled, onInput: "app.state.stockForm.tapioka.merk = this.value", required: true })}
                                 ${Components.FloatingInput({ label: "Stock Awal", type: "number", suffix: "kg", value: fData.tapioka.awal, disabled: true })}
                                 <div class="grid grid-cols-2 gap-3">
-                                    ${Components.FloatingInput({ id: 'sf-tapioka-masuk', label: "Pemasukan", type: "number", suffix: "kg", value: fData.tapioka.masuk, onInput: "Handlers.updateStockForm('tapioka', 'masuk', this.value)" })}
-                                    ${Components.FloatingInput({ id: 'sf-tapioka-akhir', label: "Stock Akhir *", type: "number", suffix: "kg", value: fData.tapioka.akhir, required: true, onInput: "Handlers.updateStockForm('tapioka', 'akhir', this.value)" })}
+                                    ${Components.FloatingInput({ id: 'sf-tapioka-masuk', label: "Pemasukan", type: "number", suffix: "kg", value: fData.tapioka.masuk, disabled: isDisabled, onInput: "Handlers.updateStockForm('tapioka', 'masuk', this.value)" })}
+                                    ${Components.FloatingInput({ id: 'sf-tapioka-akhir', label: "Stock Akhir *", type: "number", suffix: "kg", value: fData.tapioka.akhir, required: true, disabled: isDisabled, onInput: "Handlers.updateStockForm('tapioka', 'akhir', this.value)" })}
                                 </div>
                             </div>
                             <div class="flex justify-between items-center bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200 shadow-inner">
@@ -825,15 +818,15 @@
                         ${Components.Card(`
                             <h3 class="font-black text-slate-800 text-lg mb-4 flex items-center border-b border-slate-100 pb-3"><div class="p-2 bg-indigo-100 text-indigo-700 rounded-xl mr-3"><i data-lucide="box" stroke-width="2.5" style="width: 18px; height: 18px;"></i></div> Gula Mesh 30</h3>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                ${Components.FloatingInput({ id: 'sf-gula-merk', label: "Merk Gula", value: fData.gula.merk, required: true, onInput: "app.state.stockForm.gula.merk = this.value" })}
-                                ${Components.FloatingInput({ id: 'sf-gula-akhir', label: "Total Opname", type: "number", suffix: "kg", value: fData.gula.akhir, required: true, onInput: "app.state.stockForm.gula.akhir = this.value" })}
+                                ${Components.FloatingInput({ id: 'sf-gula-merk', label: "Merk Gula", value: fData.gula.merk, required: true, disabled: isDisabled, onInput: "app.state.stockForm.gula.merk = this.value" })}
+                                ${Components.FloatingInput({ id: 'sf-gula-akhir', label: "Total Opname", type: "number", suffix: "kg", value: fData.gula.akhir, required: true, disabled: isDisabled, onInput: "app.state.stockForm.gula.akhir = this.value" })}
                             </div>
                         `, 'mb-6')}
 
                         ${Components.Card(`
                             <h3 class="font-black text-slate-800 text-md sm:text-lg mb-3 flex items-center"><div class="p-1.5 sm:p-2 bg-blue-50 text-blue-600 rounded-lg mr-2"><i data-lucide="pen-tool" stroke-width="2.5" style="width: 16px; height: 16px;"></i></div> Catatan Opname Shift</h3>
                             <div class="flex items-start bg-slate-50 p-1 rounded-2xl border border-slate-200 shadow-inner">
-                                <textarea rows="2" id="sf-catatanOpname" oninput="app.state.stockForm.catatanOpname = this.value" placeholder="Tulis catatan operasional shift ini..." class="w-full bg-transparent p-3 text-sm font-medium text-slate-800 outline-none resize-none placeholder-slate-400">${fData.catatanOpname}</textarea>
+                                <textarea rows="2" id="sf-catatanOpname" ${isDisabled ? 'disabled' : ''} oninput="app.state.stockForm.catatanOpname = this.value" placeholder="Tulis catatan operasional shift ini..." class="w-full bg-transparent p-3 text-sm font-medium text-slate-800 outline-none resize-none placeholder-slate-400 ${isDisabled ? 'opacity-70 cursor-not-allowed' : ''}">${fData.catatanOpname}</textarea>
                             </div>
                         `, 'mb-6 border-l-[4px] border-l-blue-400')}
 
@@ -843,7 +836,7 @@
                                 ${[0, 1, 2, 3].map(i => `
                                     <div class="flex items-start bg-white p-1.5 sm:p-2 rounded-xl border border-slate-200 shadow-sm">
                                         <span class="text-slate-400 text-[10px] sm:text-xs font-black w-8 text-center pt-2 sm:pt-2.5">${i + 1}.</span>
-                                        <textarea rows="1" oninput="app.state.stockForm.serahTerima[${i}] = this.value; this.style.height='auto'; this.style.height=this.scrollHeight+'px';" placeholder="Pesan handover ke shift selanjutnya..." class="flex-1 bg-transparent p-1.5 sm:p-2 text-xs sm:text-sm font-medium text-slate-800 outline-none resize-none overflow-hidden">${fData.serahTerima[i]}</textarea>
+                                        <textarea rows="1" ${isDisabled ? 'disabled' : ''} oninput="app.state.stockForm.serahTerima[${i}] = this.value; this.style.height='auto'; this.style.height=this.scrollHeight+'px';" placeholder="Pesan handover ke shift selanjutnya..." class="flex-1 bg-transparent p-1.5 sm:p-2 text-xs sm:text-sm font-medium text-slate-800 outline-none resize-none overflow-hidden ${isDisabled ? 'opacity-70 cursor-not-allowed' : ''}">${fData.serahTerima[i] || ''}</textarea>
                                     </div>
                                 `).join('')}
                             </div>
@@ -851,11 +844,13 @@
 
                         <div class="mt-8 w-full pb-8">
                             <div class="flex gap-2 sm:gap-3 flex-col sm:flex-row">
+                                ${!fData.isExisting ? `
                                 <button type="submit" id="sf-submit-btn" class="w-full sm:flex-[2] bg-slate-900 hover:bg-black text-white py-3.5 sm:py-4 rounded-xl flex items-center justify-center font-black transition-all shadow-lg active:scale-95 text-sm disabled:opacity-70 disabled:cursor-wait">
                                     <i data-lucide="save" id="sf-submit-icon" class="mr-2" style="width: 18px; height: 18px;"></i> <span id="sf-submit-text">Simpan Opname</span>
                                 </button>
-                                <button type="button" onclick="Handlers.shareOpnameWA()" class="w-full sm:flex-[1] bg-white text-blue-700 border border-slate-200 py-3.5 sm:py-4 rounded-xl flex items-center justify-center font-black transition-all shadow-lg active:scale-95 text-sm mt-3 sm:mt-0">
-                                    <i data-lucide="share-2" class="mr-2" style="width: 18px; height: 18px;"></i> Bagikan WA
+                                ` : ''}
+                                <button type="button" onclick="Handlers.shareOpnameWA()" class="w-full ${fData.isExisting ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500' : 'sm:flex-[1] bg-white text-blue-700 border-slate-200 hover:bg-blue-50'} border py-3.5 sm:py-4 rounded-xl flex items-center justify-center font-black transition-all shadow-lg active:scale-95 text-sm mt-3 sm:mt-0">
+                                    <i data-lucide="share-2" class="mr-2" style="width: 18px; height: 18px;"></i> Bagikan WA Laporan
                                 </button>
                             </div>
                         </div>
@@ -924,7 +919,7 @@
                             <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
                                 <div><div class="font-black text-slate-800 text-sm">${getDayName(log.tanggal)}, ${formatDate(log.tanggal)}</div><div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Disimpan: ${new Date(log.timestamp).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})}</div></div>
                                 <div class="flex items-center gap-2">
-                                    <button type="button" onclick="Handlers.showOpnameBulky(event, '${log.tanggal}', '${log.shift}')" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-2.5 py-1.5 rounded-lg border border-blue-100 text-[10px] font-black flex items-center gap-1.5 active:scale-95 transition-all shadow-sm">
+                                    <button type="button" onclick="Handlers.showOpnameBulky('${log.tanggal}', '${log.shift}')" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-2.5 py-1.5 rounded-lg border border-blue-100 text-[10px] font-black flex items-center gap-1.5 active:scale-95 transition-all shadow-sm">
                                         <i data-lucide="truck" style="width: 12px; height: 12px;"></i> Bulky
                                     </button>
                                     ${Components.Badge(`Shift ${log.shift}`, 'warning')}
@@ -1072,7 +1067,7 @@
                             ${Object.keys(recapData).length === 0 ? `
                                 <div class="bg-slate-50 rounded-2xl p-4 sm:p-5 text-center border border-slate-200"><p class="text-xs sm:text-sm text-slate-500 font-medium">Belum ada data bongkar sesuai filter.</p></div>
                             ` : Object.keys(recapData).map(merk => `
-                                <div onclick="Handlers.openBulkyModal(event, '${merk}')" class="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl flex justify-between items-center border border-slate-200 cursor-pointer hover:bg-slate-50 transition-all active:scale-95 group relative pr-8 sm:pr-10 shadow-sm">
+                                <div onclick="Handlers.openBulkyModal('${merk}')" class="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl flex justify-between items-center border border-slate-200 cursor-pointer hover:bg-slate-50 transition-all active:scale-95 group relative pr-8 sm:pr-10 shadow-sm">
                                     <div class="flex items-center gap-3 sm:gap-4">
                                         <div class="bg-blue-50 w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-blue-600 border border-blue-100"><i data-lucide="truck" stroke-width="2" style="width: 20px; height: 20px;"></i></div>
                                         <div><span class="font-black text-base sm:text-lg block leading-none mb-1 sm:mb-1.5 text-slate-800">${merk}</span><span class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest">${recapData[merk].count} Kendaraan</span></div>
@@ -1354,6 +1349,31 @@
         };
 
         const Handlers = {
+            checkExistingOpname: () => {
+                const fData = app.state.stockForm;
+                const logs = app.state.db.opnameLogs || [];
+                const existing = logs.find(l => l.tanggal === fData.tanggal && String(l.shift) === String(fData.shift));
+
+                if (existing) {
+                    app.state.stockForm = JSON.parse(JSON.stringify(existing));
+                    app.state.stockForm.isExisting = true;
+                } else {
+                    const db = app.state.db;
+                    app.state.stockForm = {
+                        tanggal: fData.tanggal, shift: fData.shift,
+                        isExisting: false,
+                        silo1: { merk: db.lastStock?.silo1?.merk || '', customMerk: '', awal: db.lastStock?.silo1?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
+                        silo2: { merk: db.lastStock?.silo2?.merk || '', awal: db.lastStock?.silo2?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
+                        silo3: { merk: db.lastStock?.silo3?.merk || '', awal: db.lastStock?.silo3?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
+                        silo4: { merk: db.lastStock?.silo4?.merk || '', customMerk: '', awal: db.lastStock?.silo4?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
+                        tapioka: { merk: db.lastStock?.tapioka?.merk || '', awal: db.lastStock?.tapioka?.akhir || 0, masuk: '', akhir: '', lines: [] }, 
+                        gula: { merk: db.lastStock?.gula?.merk || '', akhir: db.lastStock?.gula?.akhir || 0 },
+                        catatanOpname: '', serahTerima: ['', '', '', '', '']
+                    };
+                }
+                app.renderActiveTab();
+            },
+
             shareAwal: () => {
                 const { shift, date } = getCurrentShiftInfo();
                 const hari = getDayName(date);
@@ -1529,6 +1549,8 @@
 
             updateStockForm: (siloKey, field, value) => {
                 const fData = app.state.stockForm;
+                if(fData.isExisting) return; // Prevent logic updates if disabled
+
                 fData[siloKey][field] = value;
                 if (field === 'merk' && (siloKey.startsWith('silo') || siloKey === 'tapioka')) {
                     const customContainer = document.getElementById(`sf-${siloKey}-customMerk-container`);
@@ -1545,6 +1567,8 @@
 
             toggleLine: (siloKey, line) => {
                 const fData = app.state.stockForm;
+                if(fData.isExisting) return;
+                
                 let current = parseLines(fData[siloKey].lines);
                 const idx = current.indexOf(line);
                 if (idx > -1) current.splice(idx, 1);
@@ -1555,6 +1579,8 @@
 
             selectAllLines: (siloKey) => {
                 const fData = app.state.stockForm;
+                if(fData.isExisting) return;
+
                 const all = SILO_LINES[siloKey];
                 let current = parseLines(fData[siloKey].lines);
                 if (current.length === all.length) fData[siloKey].lines = [];
@@ -1567,9 +1593,13 @@
                 const fData = app.state.stockForm;
                 const db = app.state.db;
                 
+                if (fData.isExisting) return;
+
                 const existingLog = db.opnameLogs?.find(log => log.tanggal === fData.tanggal && log.shift === fData.shift);
                 if (existingLog) {
-                    app.showGlobalMessage(`Data Opname tanggal ${formatDate(fData.tanggal)} Shift ${fData.shift} sudah pernah disimpan!`, true); return;
+                    app.showGlobalMessage(`Data Opname tanggal ${formatDate(fData.tanggal)} Shift ${fData.shift} sudah pernah disimpan!`, true); 
+                    Handlers.checkExistingOpname(); 
+                    return;
                 }
                 
                 const btn = document.getElementById('sf-submit-btn');
@@ -1624,9 +1654,12 @@
                 };
                 
                 const newLogEntry = { ...fData, id: Date.now(), timestamp: new Date().toISOString() };
+                delete newLogEntry.isExisting; 
+                
                 app.postData({ action: 'saveOpname', payload: { stock: newStockData, log: newLogEntry } }).catch(err => console.error(err));
                 
-                app.state.stockForm = null;
+                app.state.stockForm.isExisting = true;
+                
                 btn.disabled = false; btn.classList.remove('opacity-70', 'cursor-wait');
                 document.getElementById('sf-submit-icon').classList.remove('animate-spin');
                 app.showSuccessModal('Berhasil!', 'Data opname shift ini telah disimpan.');
@@ -1664,9 +1697,9 @@
                 
                 msg += `*GULA MESH 30 (${d.gula.merk}) : ${d.gula.akhir || '-'} kg*\n\n`;
                 
-                if (d.catatanOpname.trim() !== '') msg += `*Catatan Opname:*\n${d.catatanOpname}\n\n`;
+                if (d.catatanOpname && d.catatanOpname.trim() !== '') msg += `*Catatan Opname:*\n${d.catatanOpname}\n\n`;
                 msg += `*Catatan Handover ke Shift ${d.shift === '3' ? '1' : String(Number(d.shift) + 1)}:*\n`;
-                const notes = d.serahTerima.filter(n => n.trim() !== '');
+                const notes = (d.serahTerima || []).filter(n => n && n.trim() !== '');
                 if(notes.length > 0) notes.forEach((catatan, i) => msg += `${i + 1}. ${catatan}\n`);
                 else msg += `- Aman\n`;
                 
@@ -1717,6 +1750,7 @@
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF('p', 'mm', 'a4');
                 const pdfWidth = pdf.internal.pageSize.getWidth(); 
+                const pdfHeight = pdf.internal.pageSize.getHeight();
                 
                 const tempContainer = document.createElement('div');
                 tempContainer.style.position = 'absolute'; tempContainer.style.left = '-9999px'; tempContainer.style.top = '0';
@@ -1728,12 +1762,21 @@
                     const dayLogs = groupedByDate[date].sort((a,b) => parseInt(a.shift) - parseInt(b.shift));
                     
                     const pageDiv = document.createElement('div');
-                    pageDiv.style.width = '800px'; pageDiv.style.minHeight = '1131px'; pageDiv.style.backgroundColor = '#ffffff'; pageDiv.style.padding = '40px'; pageDiv.style.boxSizing = 'border-box'; pageDiv.style.fontFamily = 'sans-serif';
+                    // FIX: Biarkan height 'auto' agar menyesuaikan konten, tidak akan pernah terpotong. 
+                    // Nanti kita akan scale ke ukuran A4 secara dinamis.
+                    pageDiv.style.width = '800px'; 
+                    pageDiv.style.height = 'auto'; 
+                    pageDiv.style.minHeight = '1123px'; // Ratio minimal A4
+                    pageDiv.style.backgroundColor = '#ffffff'; 
+                    pageDiv.style.padding = '30px 40px'; // Padding yang lebih nyaman
+                    pageDiv.style.boxSizing = 'border-box'; 
+                    pageDiv.style.fontFamily = 'sans-serif';
                     
+                    // Merapatkan sedikit margin bawah agar lebih hemat ruang saat scaling
                     let html = `
-                        <div style="text-align:center; border-bottom: 2px solid #cbd5e1; padding-bottom: 15px; margin-bottom: 20px;">
-                            <h1 style="font-size: 24px; font-weight: 900; color: #1e293b; margin: 0 0 5px 0;">Laporan Rekapitulasi Opname MHS</h1>
-                            <p style="font-size: 14px; color: #64748b; margin: 0; font-weight: bold;">Hari/Tanggal: ${getDayName(date)}, ${formatDate(date)}</p>
+                        <div style="text-align:center; border-bottom: 2px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 10px;">
+                            <h1 style="font-size: 20px; font-weight: 900; color: #1e293b; margin: 0 0 4px 0;">Laporan Rekapitulasi Opname MHS</h1>
+                            <p style="font-size: 12px; color: #64748b; margin: 0; font-weight: bold;">Hari/Tanggal: ${getDayName(date)}, ${formatDate(date)}</p>
                         </div>
                     `;
                     
@@ -1741,39 +1784,39 @@
                         const getTotalM = (silo) => (Number(silo?.masukZak) || 0) + (Number(silo?.masukBulky) || 0) + (Number(silo?.masuk) || 0);
                         const rMasuk = (silo) => {
                             const z = Number(silo?.masukZak) || 0; const b = Number(silo?.masukBulky) || 0; const oldM = Number(silo?.masuk) || 0;
-                            if(z > 0 || b > 0) return `${z+b} <span style="font-size:10px; color:#64748b;">(Z:${z}, B:${b})</span>`;
+                            if(z > 0 || b > 0) return `${z+b} <span style="font-size:9px; color:#64748b;">(Z:${z}, B:${b})</span>`;
                             if(oldM > 0) return oldM; return '-';
                         };
 
                         const l1 = parseLines(log.silo1?.lines).join(', ');
-                        const lStr1 = l1 ? `<span style="font-size:9px; color:#3b82f6; font-weight:bold; display:block;">Line: ${l1}</span>` : '';
+                        const lStr1 = l1 ? `<span style="font-size:8px; color:#3b82f6; font-weight:bold; display:block;">Line: ${l1}</span>` : '';
                         const l2 = parseLines(log.silo2?.lines).join(', ');
-                        const lStr2 = l2 ? `<span style="font-size:9px; color:#3b82f6; font-weight:bold; display:block;">Line: ${l2}</span>` : '';
+                        const lStr2 = l2 ? `<span style="font-size:8px; color:#3b82f6; font-weight:bold; display:block;">Line: ${l2}</span>` : '';
                         const l3 = parseLines(log.silo3?.lines).join(', ');
-                        const lStr3 = l3 ? `<span style="font-size:9px; color:#3b82f6; font-weight:bold; display:block;">Line: ${l3}</span>` : '';
+                        const lStr3 = l3 ? `<span style="font-size:8px; color:#3b82f6; font-weight:bold; display:block;">Line: ${l3}</span>` : '';
                         const l4 = parseLines(log.silo4?.lines).join(', ');
-                        const lStr4 = l4 ? `<span style="font-size:9px; color:#3b82f6; font-weight:bold; display:block;">Line: ${l4}</span>` : '';
+                        const lStr4 = l4 ? `<span style="font-size:8px; color:#3b82f6; font-weight:bold; display:block;">Line: ${l4}</span>` : '';
                         
                         html += `
-                        <div style="margin-bottom: 25px;">
-                            <h3 style="font-size: 16px; font-weight: 800; color: #334155; margin: 0 0 10px 0; background: #f1f5f9; padding: 8px 12px; border-radius: 6px; display: inline-block;">Shift ${log.shift}</h3>
-                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 13px;">
+                        <div style="margin-bottom: 8px;">
+                            <h3 style="font-size: 12px; font-weight: 800; color: #334155; margin: 0 0 4px 0; background: #f1f5f9; padding: 4px 8px; border-radius: 4px; display: inline-block;">Shift ${log.shift}</h3>
+                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 10px;">
                                 <thead>
-                                    <tr style="background: #f8fafc; text-align: left; color: #64748b; font-size: 11px; text-transform: uppercase;">
-                                        <th style="padding: 8px; border: 1px solid #e2e8f0; width: 25%;">Item / Silo</th><th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">Awal</th><th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">Masuk</th><th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; color: #2563eb;">Pakai</th><th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">Akhir</th>
+                                    <tr style="background: #f8fafc; text-align: left; color: #64748b; font-size: 9px; text-transform: uppercase;">
+                                        <th style="padding: 4px; border: 1px solid #e2e8f0; width: 25%;">Item / Silo</th><th style="padding: 4px; border: 1px solid #e2e8f0; text-align: right;">Awal</th><th style="padding: 4px; border: 1px solid #e2e8f0; text-align: right;">Masuk</th><th style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; color: #2563eb;">Pakai</th><th style="padding: 4px; border: 1px solid #e2e8f0; text-align: right;">Akhir</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 1 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo1?.merk || '-'}</span>${lStr1}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo1?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo1)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo1?.awal, getTotalM(log.silo1), log.silo1?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo1?.akhir || 0}</td></tr>
-                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 2 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo2?.merk || '-'}</span>${lStr2}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo2?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo2)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo2?.awal, getTotalM(log.silo2), log.silo2?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo2?.akhir || 0}</td></tr>
-                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 3 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo3?.merk || '-'}</span>${lStr3}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo3?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo3)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo3?.awal, getTotalM(log.silo3), log.silo3?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo3?.akhir || 0}</td></tr>
-                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 4 <span style="font-size:10px; color:#94a3b8; font-weight:normal; display:block;">${log.silo4?.merk || '-'}</span>${lStr4}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${log.silo4?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo4)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo4?.awal, getTotalM(log.silo4), log.silo4?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo4?.akhir || 0}</td></tr>
-                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #b45309; background: #fffbeb;">Tapioka <span style="font-size:10px; color:#d97706; font-weight:normal; display:block;">${log.tapioka?.merk || '-'}</span></td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #fffbeb;">${log.tapioka?.awal || 0}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #fffbeb;">${log.tapioka?.masuk || '-'}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb; background: #fffbeb;">${calcPakai(log.tapioka?.awal, log.tapioka?.masuk, log.tapioka?.akhir)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; background: #fffbeb;">${log.tapioka?.akhir || 0}</td></tr>
-                                    <tr><td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: #4338ca; background: #eef2ff;">Gula <span style="font-size:10px; color:#6366f1; font-weight:normal; display:block;">${log.gula?.merk || '-'}</span></td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; background: #eef2ff;">${log.gula?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 4px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 1 <span style="font-size:9px; color:#94a3b8; font-weight:normal; display:block;">${log.silo1?.merk || '-'}</span>${lStr1}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right;">${log.silo1?.awal || 0}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo1)}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo1?.awal, getTotalM(log.silo1), log.silo1?.akhir)}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo1?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 4px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 2 <span style="font-size:9px; color:#94a3b8; font-weight:normal; display:block;">${log.silo2?.merk || '-'}</span>${lStr2}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right;">${log.silo2?.awal || 0}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo2)}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo2?.awal, getTotalM(log.silo2), log.silo2?.akhir)}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo2?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 4px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 3 <span style="font-size:9px; color:#94a3b8; font-weight:normal; display:block;">${log.silo3?.merk || '-'}</span>${lStr3}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right;">${log.silo3?.awal || 0}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo3)}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo3?.awal, getTotalM(log.silo3), log.silo3?.akhir)}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo3?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 4px; border: 1px solid #e2e8f0; font-weight: bold; color: #1e293b;">Silo 4 <span style="font-size:9px; color:#94a3b8; font-weight:normal; display:block;">${log.silo4?.merk || '-'}</span>${lStr4}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right;">${log.silo4?.awal || 0}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right;">${rMasuk(log.silo4)}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb;">${calcPakai(log.silo4?.awal, getTotalM(log.silo4), log.silo4?.akhir)}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${log.silo4?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 4px; border: 1px solid #e2e8f0; font-weight: bold; color: #b45309; background: #fffbeb;">Tapioka <span style="font-size:9px; color:#d97706; font-weight:normal; display:block;">${log.tapioka?.merk || '-'}</span></td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; background: #fffbeb;">${log.tapioka?.awal || 0}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; background: #fffbeb;">${log.tapioka?.masuk || '-'}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #2563eb; background: #fffbeb;">${calcPakai(log.tapioka?.awal, log.tapioka?.masuk, log.tapioka?.akhir)}</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; background: #fffbeb;">${log.tapioka?.akhir || 0}</td></tr>
+                                    <tr><td style="padding: 4px; border: 1px solid #e2e8f0; font-weight: bold; color: #4338ca; background: #eef2ff;">Gula <span style="font-size:9px; color:#6366f1; font-weight:normal; display:block;">${log.gula?.merk || '-'}</span></td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; background: #eef2ff; color:#94a3b8;">-</td><td style="padding: 4px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; background: #eef2ff;">${log.gula?.akhir || 0}</td></tr>
                                 </tbody>
                             </table>`;
                         if (log.catatanOpname && log.catatanOpname.trim() !== '') {
-                            html += `<div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 15px; border-radius: 8px; margin-top: 5px;"><p style="font-size: 10px; font-weight: bold; color: #1d4ed8; margin: 0 0 5px 0; text-transform: uppercase;">Catatan Opname Shift Ini:</p><p style="font-size: 12px; color: #1e293b; margin: 0; font-style: italic;">"${log.catatanOpname}"</p></div>`;
+                            html += `<div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 4px 8px; border-radius: 4px; margin-top: 2px;"><p style="font-size: 8px; font-weight: bold; color: #1d4ed8; margin: 0 0 2px 0; text-transform: uppercase;">Catatan Opname:</p><p style="font-size: 9px; color: #1e293b; margin: 0; font-style: italic;">"${log.catatanOpname}"</p></div>`;
                         }
                         html += `</div>`;
                     });
@@ -1782,20 +1825,39 @@
                     tempContainer.appendChild(pageDiv);
                     
                     try {
+                        // Render full content
                         const canvas = await html2canvas(pageDiv, { scale: 2, useCORS: true });
                         const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                        
                         if (!isFirstPage) { pdf.addPage(); }
-                        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
+                        
+                        // FIX: Menghitung Aspect Ratio agar pas di satu halaman PDF (Fit to Page)
+                        const imgProps = pdf.getImageProperties(imgData);
+                        const widthRatio = pdfWidth / imgProps.width;
+                        const heightRatio = pdfHeight / imgProps.height;
+                        
+                        // Pilih rasio terkecil agar tidak ada sisi yang terpotong
+                        const ratio = Math.min(widthRatio, heightRatio);
+                        
+                        const finalWidth = imgProps.width * ratio;
+                        const finalHeight = imgProps.height * ratio;
+                        
+                        // Center secara horizontal
+                        const xOffset = (pdfWidth - finalWidth) / 2;
+                        
+                        // Tempel image dengan ukuran hasil penyesuaian rasio
+                        pdf.addImage(imgData, 'JPEG', xOffset, 0, finalWidth, finalHeight);
                         isFirstPage = false;
-                    } catch(err) {}
+                    } catch(err) {
+                        console.error("PDF generation err:", err);
+                    }
                     
                     tempContainer.innerHTML = ''; 
                 }
                 
                 document.body.removeChild(tempContainer);
                 pdf.save(`Rekap_Opname_MHS_${new Date().getTime()}.pdf`);
-                app.showSuccessModal('Selesai', 'PDF berhasil diunduh. (1 Hari / 3 Shift = 1 Halaman)');
+                app.showSuccessModal('Selesai', 'PDF berhasil diunduh. (1 Hari = 1 Halaman A4)');
             },
 
             exportOpnameExcel: () => {
@@ -1837,108 +1899,87 @@
                 document.body.appendChild(link); link.click(); document.body.removeChild(link);
             },
 
-            showOpnameBulky: (e, tanggal, shift) => {
+            showOpnameBulky: (tanggal, shift) => {
                 const opnameDate = formatDateToYYYYMMDD(tanggal);
                 const matchingBulky = app.state.db.bulkyLogs?.filter(b => formatDateToYYYYMMDD(b.tanggal) === opnameDate && String(b.shift) === String(shift)) || [];
-                
-                let existing = document.getElementById('dynamic-bulky-modal');
+
+                let existing = document.getElementById('opname-bulky-modal');
                 if (existing) existing.remove();
 
                 const div = document.createElement('div');
-                div.id = 'dynamic-bulky-modal';
-                div.className = 'fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 animate-fade-in';
+                div.id = 'opname-bulky-modal';
+                div.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in';
                 div.onclick = Handlers.closeOpnameBulkyModal;
 
-                const contentHtml = `
-                    <div id="dynamic-modal-content" class="absolute w-[calc(100%-32px)] max-w-lg left-0 right-0 mx-auto bg-[#F4F7F9] rounded-3xl max-h-[70vh] flex flex-col shadow-2xl overflow-hidden animate-scale-in" onclick="event.stopPropagation()">
+                let contentHtml = matchingBulky.length === 0 ? `
+                    <div class="text-center py-8"><div class="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><i data-lucide="inbox" class="text-slate-400"></i></div><p class="text-sm font-semibold text-slate-500">Tidak ada data bulky dibongkar pada shift ini.</p></div>
+                ` : matchingBulky.map(log => `
+                    <div class="bg-white border border-slate-200 shadow-sm rounded-2xl p-4">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <div class="font-black text-slate-800 text-base">${log.noBulky}</div>
+                                <div class="text-[10px] font-bold text-slate-500">${log.merk}</div>
+                                ${log.tanggalKedatangan ? `<div class="text-[10px] font-bold text-blue-500 mt-0.5">Datang: ${formatDate(log.tanggalKedatangan)}</div>` : ''}
+                            </div>
+                            ${Components.Badge(log.tujuanSilo || 'Tidak ada data', 'primary')}
+                        </div>
+                        <div class="grid grid-cols-4 gap-2 text-center text-xs bg-slate-50 rounded-xl p-2 mb-3 border border-slate-100">
+                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Masuk</div><div class="font-semibold text-slate-700">${formatTime(log.jamMasuk)}</div></div>
+                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Release</div><div class="font-semibold text-slate-700">${formatTime(log.jamRelease)}</div></div>
+                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Bongkar</div><div class="font-semibold text-slate-700">${formatTime(log.jamBongkar)}</div></div>
+                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Selesai</div><div class="font-semibold text-slate-700">${formatTime(log.jamSelesai)}</div></div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center border-t border-slate-100 pt-3">
+                            <div><div class="text-[9px] text-slate-400 font-bold uppercase">Awal</div><div class="font-black text-slate-700">${log.qtyAwal}</div></div>
+                            <div class="border-l border-r border-slate-100"><div class="text-[9px] text-slate-400 font-bold uppercase">Akhir</div><div class="font-black text-slate-700">${log.qtyAkhir}</div></div>
+                            <div><div class="text-[9px] text-rose-400 font-bold uppercase">Susut</div><div class="font-black text-rose-600">${Number(log.qtyAwal) - Number(log.qtyAkhir)}</div></div>
+                        </div>
+                        ${log.catatan ? `<div class="mt-3 pt-3 border-t border-slate-100"><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Catatan</p><p class="text-xs font-semibold text-slate-700 italic">"${log.catatan}"</p></div>` : ''}
+                    </div>
+                `).join('');
+
+                div.innerHTML = `
+                    <div class="bg-[#F4F7F9] w-full max-w-lg rounded-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
                         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-white sticky top-0 z-10">
                             <div>
                                 <h3 class="font-black text-slate-800 text-lg flex items-center gap-2"><i data-lucide="truck" class="text-blue-600" style="width: 18px; height: 18px;"></i> Rincian Bulky</h3>
                                 <p class="text-[10px] font-bold text-slate-500 mt-0.5">${formatDate(tanggal)} • Shift ${shift}</p>
                             </div>
-                            <button onclick="Handlers.closeOpnameBulkyModal()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95"><i data-lucide="x" style="width: 18px; height: 18px;"></i></button>
+                            <button type="button" onclick="Handlers.closeOpnameBulkyModal()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95"><i data-lucide="x" style="width: 18px; height: 18px;"></i></button>
                         </div>
                         <div class="p-4 overflow-y-auto space-y-3">
-                            ${matchingBulky.length === 0 ? `
-                                <div class="text-center py-8"><div class="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><i data-lucide="inbox" class="text-slate-400"></i></div><p class="text-sm font-semibold text-slate-500">Tidak ada data bulky dibongkar pada shift ini.</p></div>
-                            ` : matchingBulky.map(log => `
-                                <div class="bg-white border border-slate-200 shadow-sm rounded-2xl p-4">
-                                    <div class="flex justify-between items-start mb-3">
-                                        <div>
-                                            <div class="font-black text-slate-800 text-base">${log.noBulky}</div>
-                                            <div class="text-[10px] font-bold text-slate-500">${log.merk}</div>
-                                            ${log.tanggalKedatangan ? `<div class="text-[10px] font-bold text-blue-500 mt-0.5">Datang: ${formatDate(log.tanggalKedatangan)}</div>` : ''}
-                                        </div>
-                                        ${Components.Badge(log.tujuanSilo || 'Tidak ada data', 'primary')}
-                                    </div>
-                                    <div class="grid grid-cols-4 gap-2 text-center text-xs bg-slate-50 rounded-xl p-2 mb-3 border border-slate-100">
-                                        <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Masuk</div><div class="font-semibold text-slate-700">${formatTime(log.jamMasuk)}</div></div>
-                                        <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Release</div><div class="font-semibold text-slate-700">${formatTime(log.jamRelease)}</div></div>
-                                        <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Bongkar</div><div class="font-semibold text-slate-700">${formatTime(log.jamBongkar)}</div></div>
-                                        <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Selesai</div><div class="font-semibold text-slate-700">${formatTime(log.jamSelesai)}</div></div>
-                                    </div>
-                                    <div class="grid grid-cols-3 gap-2 text-center border-t border-slate-100 pt-3">
-                                        <div><div class="text-[9px] text-slate-400 font-bold uppercase">Awal</div><div class="font-black text-slate-700">${log.qtyAwal}</div></div>
-                                        <div class="border-l border-r border-slate-100"><div class="text-[9px] text-slate-400 font-bold uppercase">Akhir</div><div class="font-black text-slate-700">${log.qtyAkhir}</div></div>
-                                        <div><div class="text-[9px] text-rose-400 font-bold uppercase">Susut</div><div class="font-black text-rose-600">${Number(log.qtyAwal) - Number(log.qtyAkhir)}</div></div>
-                                    </div>
-                                    ${log.catatan ? `<div class="mt-3 pt-3 border-t border-slate-100"><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Catatan</p><p class="text-xs font-semibold text-slate-700 italic">"${log.catatan}"</p></div>` : ''}
-                                </div>
-                            `).join('')}
+                            ${contentHtml}
                         </div>
                     </div>
                 `;
-                div.innerHTML = contentHtml;
                 document.body.appendChild(div);
                 lucide.createIcons({root: div});
-
-                const contentBox = document.getElementById('dynamic-modal-content');
-                if (e && e.currentTarget) {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const boxHeight = contentBox.offsetHeight;
-                    const windowHeight = window.innerHeight;
-                    
-                    let topPos = rect.bottom + 10;
-                    
-                    if (topPos + boxHeight > windowHeight - 20) {
-                        topPos = rect.top - boxHeight - 10;
-                    }
-                    if (topPos < 20) {
-                        topPos = Math.max(20, (windowHeight - boxHeight) / 2);
-                    }
-                    
-                    contentBox.style.top = topPos + 'px';
-                    contentBox.style.transformOrigin = topPos < rect.top ? 'bottom center' : 'top center';
-                } else {
-                    contentBox.style.top = '50%';
-                    contentBox.style.marginTop = `-${contentBox.offsetHeight / 2}px`;
-                }
             },
-            
+
             closeOpnameBulkyModal: () => { 
-                const modal = document.getElementById('dynamic-bulky-modal');
-                if (modal) modal.remove();
+                const el = document.getElementById('opname-bulky-modal');
+                if(el) el.remove();
             },
 
             changeBulkyDay: (val) => { app.state.bulkyFilters.day = val; app.renderActiveTab(); },
-            
-            openBulkyModal: (e, merk) => { 
+
+            openBulkyModal: (merk) => {
                 const recapData = window.currentBulkyRecapData;
                 if (!recapData || !recapData[merk]) return;
 
-                let existing = document.getElementById('dynamic-bulky-recap-modal');
+                let existing = document.getElementById('bulky-detail-modal');
                 if (existing) existing.remove();
 
                 const div = document.createElement('div');
-                div.id = 'dynamic-bulky-recap-modal';
-                div.className = 'fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 animate-fade-in';
+                div.id = 'bulky-detail-modal';
+                div.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in';
                 div.onclick = Handlers.closeBulkyModal;
 
-                const contentHtml = `
-                    <div id="dynamic-recap-content" class="absolute w-[calc(100%-32px)] max-w-lg left-0 right-0 mx-auto bg-[#F4F7F9] rounded-3xl max-h-[70vh] flex flex-col shadow-2xl overflow-hidden animate-scale-in" onclick="event.stopPropagation()">
+                div.innerHTML = `
+                    <div class="bg-[#F4F7F9] w-full max-w-lg rounded-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
                         <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-white sticky top-0 z-10">
                             <h3 class="font-black text-slate-800 text-lg flex items-center gap-2"><i data-lucide="truck" class="text-blue-600" style="width: 18px; height: 18px;"></i> Rincian: ${merk}</h3>
-                            <button onclick="Handlers.closeBulkyModal()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95"><i data-lucide="x" style="width: 18px; height: 18px;"></i></button>
+                            <button type="button" onclick="Handlers.closeBulkyModal()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95"><i data-lucide="x" style="width: 18px; height: 18px;"></i></button>
                         </div>
                         <div class="p-4 overflow-y-auto space-y-3">
                             ${recapData[merk].logs.map(log => `
@@ -1968,35 +2009,13 @@
                         </div>
                     </div>
                 `;
-                div.innerHTML = contentHtml;
                 document.body.appendChild(div);
                 lucide.createIcons({root: div});
-
-                const contentBox = document.getElementById('dynamic-recap-content');
-                if (e && e.currentTarget) {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const boxHeight = contentBox.offsetHeight;
-                    const windowHeight = window.innerHeight;
-                    
-                    let topPos = rect.bottom + 10;
-                    if (topPos + boxHeight > windowHeight - 20) {
-                        topPos = rect.top - boxHeight - 10;
-                    }
-                    if (topPos < 20) {
-                        topPos = Math.max(20, (windowHeight - boxHeight) / 2);
-                    }
-                    
-                    contentBox.style.top = topPos + 'px';
-                    contentBox.style.transformOrigin = topPos < rect.top ? 'bottom center' : 'top center';
-                } else {
-                    contentBox.style.top = '50%';
-                    contentBox.style.marginTop = `-${contentBox.offsetHeight / 2}px`;
-                }
             },
-            
+
             closeBulkyModal: () => { 
-                const modal = document.getElementById('dynamic-bulky-recap-modal');
-                if (modal) modal.remove();
+                const el = document.getElementById('bulky-detail-modal');
+                if(el) el.remove();
             },
             
             updateBulkyTujuan: (val) => {
