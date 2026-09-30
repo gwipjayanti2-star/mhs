@@ -175,8 +175,7 @@
                 bulkyFilters: { week: 'all', day: 'all' },
                 traceFilters: { searchTxt: '' },
                 bulkyForm: null,
-                maintenanceForm: null,
-                selectedMerkRecap: null 
+                maintenanceForm: null
             },
 
             render: function() {
@@ -897,54 +896,6 @@
                 const getTotalMasuk = (silo) => (Number(silo?.masukZak) || 0) + (Number(silo?.masukBulky) || 0) + (Number(silo?.masuk) || 0);
                 const calcP = (awal, masuk, akhir) => calcPakai(awal, masuk, akhir);
 
-                let opnameBulkyModalHtml = '';
-                if (app.state.selectedOpnameForBulky) {
-                    const { tanggal, shift } = app.state.selectedOpnameForBulky;
-                    const opnameDate = formatDateToYYYYMMDD(tanggal);
-                    const matchingBulky = app.state.db.bulkyLogs?.filter(b => formatDateToYYYYMMDD(b.tanggal) === opnameDate && String(b.shift) === String(shift)) || [];
-                    
-                    opnameBulkyModalHtml = `
-                    <div class="fixed inset-0 z-[100] flex items-start justify-center bg-slate-900/60 backdrop-blur-sm p-2 pt-12 sm:p-4 sm:pt-16 animate-fade-in" onclick="Handlers.closeOpnameBulkyModal()">
-                        <div class="bg-[#F4F7F9] w-full max-w-lg rounded-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
-                            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-white sticky top-0 z-10">
-                                <div>
-                                    <h3 class="font-black text-slate-800 text-lg flex items-center gap-2"><i data-lucide="truck" class="text-blue-600" style="width: 18px; height: 18px;"></i> Rincian Bulky</h3>
-                                    <p class="text-[10px] font-bold text-slate-500 mt-0.5">${formatDate(tanggal)} • Shift ${shift}</p>
-                                </div>
-                                <button onclick="Handlers.closeOpnameBulkyModal()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95"><i data-lucide="x" style="width: 18px; height: 18px;"></i></button>
-                            </div>
-                            <div class="p-4 overflow-y-auto space-y-3">
-                                ${matchingBulky.length === 0 ? `
-                                    <div class="text-center py-8"><div class="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><i data-lucide="inbox" class="text-slate-400"></i></div><p class="text-sm font-semibold text-slate-500">Tidak ada data bulky dibongkar pada shift ini.</p></div>
-                                ` : matchingBulky.map(log => `
-                                    <div class="bg-white border border-slate-200 shadow-sm rounded-2xl p-4">
-                                        <div class="flex justify-between items-start mb-3">
-                                            <div>
-                                                <div class="font-black text-slate-800 text-base">${log.noBulky}</div>
-                                                <div class="text-[10px] font-bold text-slate-500">${log.merk}</div>
-                                                ${log.tanggalKedatangan ? `<div class="text-[10px] font-bold text-blue-500 mt-0.5">Datang: ${formatDate(log.tanggalKedatangan)}</div>` : ''}
-                                            </div>
-                                            ${Components.Badge(log.tujuanSilo || 'Tidak ada data', 'primary')}
-                                        </div>
-                                        <div class="grid grid-cols-4 gap-2 text-center text-xs bg-slate-50 rounded-xl p-2 mb-3 border border-slate-100">
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Masuk</div><div class="font-semibold text-slate-700">${formatTime(log.jamMasuk)}</div></div>
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Release</div><div class="font-semibold text-slate-700">${formatTime(log.jamRelease)}</div></div>
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Bongkar</div><div class="font-semibold text-slate-700">${formatTime(log.jamBongkar)}</div></div>
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Selesai</div><div class="font-semibold text-slate-700">${formatTime(log.jamSelesai)}</div></div>
-                                        </div>
-                                        <div class="grid grid-cols-3 gap-2 text-center border-t border-slate-100 pt-3">
-                                            <div><div class="text-[9px] text-slate-400 font-bold uppercase">Awal</div><div class="font-black text-slate-700">${log.qtyAwal}</div></div>
-                                            <div class="border-l border-r border-slate-100"><div class="text-[9px] text-slate-400 font-bold uppercase">Akhir</div><div class="font-black text-slate-700">${log.qtyAkhir}</div></div>
-                                            <div><div class="text-[9px] text-rose-400 font-bold uppercase">Susut</div><div class="font-black text-rose-600">${Number(log.qtyAwal) - Number(log.qtyAkhir)}</div></div>
-                                        </div>
-                                        ${log.catatan ? `<div class="mt-3 pt-3 border-t border-slate-100"><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Catatan</p><p class="text-xs font-semibold text-slate-700 italic">"${log.catatan}"</p></div>` : ''}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>`;
-                }
-
                 let listHtml = '';
                 if (filteredLogs.length === 0) {
                     listHtml = `<div class="text-center p-8 bg-slate-50 rounded-3xl border border-slate-200 border-dashed mt-4"><i data-lucide="clipboard-list" class="mx-auto text-slate-300 mb-3" style="width: 32px; height: 32px;"></i><p class="text-sm font-semibold text-slate-500">Tidak ada riwayat untuk filter yang dipilih.</p></div>`;
@@ -973,7 +924,7 @@
                             <div class="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
                                 <div><div class="font-black text-slate-800 text-sm">${getDayName(log.tanggal)}, ${formatDate(log.tanggal)}</div><div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Disimpan: ${new Date(log.timestamp).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})}</div></div>
                                 <div class="flex items-center gap-2">
-                                    <button type="button" onclick="Handlers.showOpnameBulky('${log.tanggal}', '${log.shift}')" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-2.5 py-1.5 rounded-lg border border-blue-100 text-[10px] font-black flex items-center gap-1.5 active:scale-95 transition-all shadow-sm">
+                                    <button type="button" onclick="Handlers.showOpnameBulky(event, '${log.tanggal}', '${log.shift}')" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-2.5 py-1.5 rounded-lg border border-blue-100 text-[10px] font-black flex items-center gap-1.5 active:scale-95 transition-all shadow-sm">
                                         <i data-lucide="truck" style="width: 12px; height: 12px;"></i> Bulky
                                     </button>
                                     ${Components.Badge(`Shift ${log.shift}`, 'warning')}
@@ -1004,7 +955,6 @@
 
                 return `
                 <div class="max-w-2xl mx-auto space-y-4 animate-fade-in pb-8">
-                    ${opnameBulkyModalHtml}
                     ${Components.Card(`
                         <div class="flex justify-between items-center relative z-10 mb-4 border-b border-slate-200 pb-4">
                             <div>
@@ -1081,52 +1031,11 @@
                 window.currentBulkyRecapData = recapData;
                 window.currentBulkyFilters = filters;
 
-                let modalHtml = '';
-                if (app.state.selectedMerkRecap && recapData[app.state.selectedMerkRecap]) {
-                    const selMerk = app.state.selectedMerkRecap;
-                    modalHtml = `
-                    <div class="fixed inset-0 z-[100] flex items-start justify-center bg-slate-900/60 backdrop-blur-sm p-2 pt-12 sm:p-4 sm:pt-16 animate-fade-in" onclick="Handlers.closeBulkyModal()">
-                        <div class="bg-[#F4F7F9] w-full max-w-lg rounded-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
-                            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-white sticky top-0 z-10">
-                                <h3 class="font-black text-slate-800 text-lg flex items-center gap-2"><i data-lucide="truck" class="text-blue-600" style="width: 18px; height: 18px;"></i> Rincian: ${selMerk}</h3>
-                                <button onclick="Handlers.closeBulkyModal()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95"><i data-lucide="x" style="width: 18px; height: 18px;"></i></button>
-                            </div>
-                            <div class="p-4 overflow-y-auto space-y-3">
-                                ${recapData[selMerk].logs.map(log => `
-                                    <div class="bg-white border border-slate-200 shadow-sm rounded-2xl p-4">
-                                        <div class="flex justify-between items-start mb-3">
-                                            <div>
-                                                <div class="font-black text-slate-800 text-base">${log.noBulky}</div>
-                                                <div class="text-[10px] font-bold text-slate-500">Bongkar: ${formatDate(log.tanggal)} • Shift ${log.shift}</div>
-                                                ${log.tanggalKedatangan ? `<div class="text-[10px] font-bold text-blue-500 mt-0.5">Datang: ${formatDate(log.tanggalKedatangan)}</div>` : ''}
-                                            </div>
-                                            ${Components.Badge(log.tujuanSilo || 'Tidak ada data', 'primary')}
-                                        </div>
-                                        <div class="grid grid-cols-4 gap-2 text-center text-xs bg-slate-50 rounded-xl p-2 mb-3 border border-slate-100">
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Masuk</div><div class="font-semibold text-slate-700">${formatTime(log.jamMasuk)}</div></div>
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Release</div><div class="font-semibold text-slate-700">${formatTime(log.jamRelease)}</div></div>
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Bongkar</div><div class="font-semibold text-slate-700">${formatTime(log.jamBongkar)}</div></div>
-                                            <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Selesai</div><div class="font-semibold text-slate-700">${formatTime(log.jamSelesai)}</div></div>
-                                        </div>
-                                        <div class="grid grid-cols-3 gap-2 text-center border-t border-slate-100 pt-3">
-                                            <div><div class="text-[9px] text-slate-400 font-bold uppercase">Awal</div><div class="font-black text-slate-700">${log.qtyAwal} <span class="text-[9px] font-medium opacity-50">kg</span></div></div>
-                                            <div class="border-l border-r border-slate-100"><div class="text-[9px] text-slate-400 font-bold uppercase">Akhir</div><div class="font-black text-slate-700">${log.qtyAkhir} <span class="text-[9px] font-medium opacity-50">kg</span></div></div>
-                                            <div><div class="text-[9px] text-rose-400 font-bold uppercase">Susut</div><div class="font-black text-rose-600">${Number(log.qtyAwal) - Number(log.qtyAkhir)} <span class="text-[9px] font-medium opacity-50">kg</span></div></div>
-                                        </div>
-                                        ${log.catatan ? `<div class="mt-3 pt-3 border-t border-slate-100"><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Catatan</p><p class="text-xs font-semibold text-slate-700 italic">"${log.catatan}"</p></div>` : ''}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>`;
-                }
-
                 let daysOptions = `<option value="all" class="text-slate-800">Semua Hari</option>`;
                 DAYS_OF_WEEK.forEach(day => { daysOptions += `<option value="${day}" class="text-slate-800" ${filters.day === day ? 'selected' : ''}>${day}</option>`; });
 
                 return `
                 <div class="max-w-2xl mx-auto space-y-6 animate-fade-in pb-8">
-                    ${modalHtml}
                     ${Components.Card(`
                         <div class="flex justify-between items-end mb-4 relative z-10 border-b border-slate-200 pb-4">
                             <div>
@@ -1163,7 +1072,7 @@
                             ${Object.keys(recapData).length === 0 ? `
                                 <div class="bg-slate-50 rounded-2xl p-4 sm:p-5 text-center border border-slate-200"><p class="text-xs sm:text-sm text-slate-500 font-medium">Belum ada data bongkar sesuai filter.</p></div>
                             ` : Object.keys(recapData).map(merk => `
-                                <div onclick="Handlers.openBulkyModal('${merk}')" class="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl flex justify-between items-center border border-slate-200 cursor-pointer hover:bg-slate-50 transition-all active:scale-95 group relative pr-8 sm:pr-10 shadow-sm">
+                                <div onclick="Handlers.openBulkyModal(event, '${merk}')" class="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl flex justify-between items-center border border-slate-200 cursor-pointer hover:bg-slate-50 transition-all active:scale-95 group relative pr-8 sm:pr-10 shadow-sm">
                                     <div class="flex items-center gap-3 sm:gap-4">
                                         <div class="bg-blue-50 w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-blue-600 border border-blue-100"><i data-lucide="truck" stroke-width="2" style="width: 20px; height: 20px;"></i></div>
                                         <div><span class="font-black text-base sm:text-lg block leading-none mb-1 sm:mb-1.5 text-slate-800">${merk}</span><span class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest">${recapData[merk].count} Kendaraan</span></div>
@@ -1928,12 +1837,167 @@
                 document.body.appendChild(link); link.click(); document.body.removeChild(link);
             },
 
-            showOpnameBulky: (tanggal, shift) => { app.state.selectedOpnameForBulky = { tanggal, shift }; app.renderActiveTab(); },
-            closeOpnameBulkyModal: () => { app.state.selectedOpnameForBulky = null; app.renderActiveTab(); },
+            showOpnameBulky: (e, tanggal, shift) => {
+                const opnameDate = formatDateToYYYYMMDD(tanggal);
+                const matchingBulky = app.state.db.bulkyLogs?.filter(b => formatDateToYYYYMMDD(b.tanggal) === opnameDate && String(b.shift) === String(shift)) || [];
+                
+                let existing = document.getElementById('dynamic-bulky-modal');
+                if (existing) existing.remove();
+
+                const div = document.createElement('div');
+                div.id = 'dynamic-bulky-modal';
+                div.className = 'fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 animate-fade-in';
+                div.onclick = Handlers.closeOpnameBulkyModal;
+
+                const contentHtml = `
+                    <div id="dynamic-modal-content" class="absolute w-[calc(100%-32px)] max-w-lg left-0 right-0 mx-auto bg-[#F4F7F9] rounded-3xl max-h-[70vh] flex flex-col shadow-2xl overflow-hidden animate-scale-in" onclick="event.stopPropagation()">
+                        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-white sticky top-0 z-10">
+                            <div>
+                                <h3 class="font-black text-slate-800 text-lg flex items-center gap-2"><i data-lucide="truck" class="text-blue-600" style="width: 18px; height: 18px;"></i> Rincian Bulky</h3>
+                                <p class="text-[10px] font-bold text-slate-500 mt-0.5">${formatDate(tanggal)} • Shift ${shift}</p>
+                            </div>
+                            <button onclick="Handlers.closeOpnameBulkyModal()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95"><i data-lucide="x" style="width: 18px; height: 18px;"></i></button>
+                        </div>
+                        <div class="p-4 overflow-y-auto space-y-3">
+                            ${matchingBulky.length === 0 ? `
+                                <div class="text-center py-8"><div class="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><i data-lucide="inbox" class="text-slate-400"></i></div><p class="text-sm font-semibold text-slate-500">Tidak ada data bulky dibongkar pada shift ini.</p></div>
+                            ` : matchingBulky.map(log => `
+                                <div class="bg-white border border-slate-200 shadow-sm rounded-2xl p-4">
+                                    <div class="flex justify-between items-start mb-3">
+                                        <div>
+                                            <div class="font-black text-slate-800 text-base">${log.noBulky}</div>
+                                            <div class="text-[10px] font-bold text-slate-500">${log.merk}</div>
+                                            ${log.tanggalKedatangan ? `<div class="text-[10px] font-bold text-blue-500 mt-0.5">Datang: ${formatDate(log.tanggalKedatangan)}</div>` : ''}
+                                        </div>
+                                        ${Components.Badge(log.tujuanSilo || 'Tidak ada data', 'primary')}
+                                    </div>
+                                    <div class="grid grid-cols-4 gap-2 text-center text-xs bg-slate-50 rounded-xl p-2 mb-3 border border-slate-100">
+                                        <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Masuk</div><div class="font-semibold text-slate-700">${formatTime(log.jamMasuk)}</div></div>
+                                        <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Release</div><div class="font-semibold text-slate-700">${formatTime(log.jamRelease)}</div></div>
+                                        <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Bongkar</div><div class="font-semibold text-slate-700">${formatTime(log.jamBongkar)}</div></div>
+                                        <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Selesai</div><div class="font-semibold text-slate-700">${formatTime(log.jamSelesai)}</div></div>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-2 text-center border-t border-slate-100 pt-3">
+                                        <div><div class="text-[9px] text-slate-400 font-bold uppercase">Awal</div><div class="font-black text-slate-700">${log.qtyAwal}</div></div>
+                                        <div class="border-l border-r border-slate-100"><div class="text-[9px] text-slate-400 font-bold uppercase">Akhir</div><div class="font-black text-slate-700">${log.qtyAkhir}</div></div>
+                                        <div><div class="text-[9px] text-rose-400 font-bold uppercase">Susut</div><div class="font-black text-rose-600">${Number(log.qtyAwal) - Number(log.qtyAkhir)}</div></div>
+                                    </div>
+                                    ${log.catatan ? `<div class="mt-3 pt-3 border-t border-slate-100"><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Catatan</p><p class="text-xs font-semibold text-slate-700 italic">"${log.catatan}"</p></div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                div.innerHTML = contentHtml;
+                document.body.appendChild(div);
+                lucide.createIcons({root: div});
+
+                const contentBox = document.getElementById('dynamic-modal-content');
+                if (e && e.currentTarget) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const boxHeight = contentBox.offsetHeight;
+                    const windowHeight = window.innerHeight;
+                    
+                    let topPos = rect.bottom + 10;
+                    
+                    if (topPos + boxHeight > windowHeight - 20) {
+                        topPos = rect.top - boxHeight - 10;
+                    }
+                    if (topPos < 20) {
+                        topPos = Math.max(20, (windowHeight - boxHeight) / 2);
+                    }
+                    
+                    contentBox.style.top = topPos + 'px';
+                    contentBox.style.transformOrigin = topPos < rect.top ? 'bottom center' : 'top center';
+                } else {
+                    contentBox.style.top = '50%';
+                    contentBox.style.marginTop = `-${contentBox.offsetHeight / 2}px`;
+                }
+            },
+            
+            closeOpnameBulkyModal: () => { 
+                const modal = document.getElementById('dynamic-bulky-modal');
+                if (modal) modal.remove();
+            },
 
             changeBulkyDay: (val) => { app.state.bulkyFilters.day = val; app.renderActiveTab(); },
-            openBulkyModal: (merk) => { app.state.selectedMerkRecap = merk; app.renderActiveTab(); },
-            closeBulkyModal: () => { app.state.selectedMerkRecap = null; app.renderActiveTab(); },
+            
+            openBulkyModal: (e, merk) => { 
+                const recapData = window.currentBulkyRecapData;
+                if (!recapData || !recapData[merk]) return;
+
+                let existing = document.getElementById('dynamic-bulky-recap-modal');
+                if (existing) existing.remove();
+
+                const div = document.createElement('div');
+                div.id = 'dynamic-bulky-recap-modal';
+                div.className = 'fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 animate-fade-in';
+                div.onclick = Handlers.closeBulkyModal;
+
+                const contentHtml = `
+                    <div id="dynamic-recap-content" class="absolute w-[calc(100%-32px)] max-w-lg left-0 right-0 mx-auto bg-[#F4F7F9] rounded-3xl max-h-[70vh] flex flex-col shadow-2xl overflow-hidden animate-scale-in" onclick="event.stopPropagation()">
+                        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-white sticky top-0 z-10">
+                            <h3 class="font-black text-slate-800 text-lg flex items-center gap-2"><i data-lucide="truck" class="text-blue-600" style="width: 18px; height: 18px;"></i> Rincian: ${merk}</h3>
+                            <button onclick="Handlers.closeBulkyModal()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95"><i data-lucide="x" style="width: 18px; height: 18px;"></i></button>
+                        </div>
+                        <div class="p-4 overflow-y-auto space-y-3">
+                            ${recapData[merk].logs.map(log => `
+                                <div class="bg-white border border-slate-200 shadow-sm rounded-2xl p-4">
+                                    <div class="flex justify-between items-start mb-3">
+                                        <div>
+                                            <div class="font-black text-slate-800 text-base">${log.noBulky}</div>
+                                            <div class="text-[10px] font-bold text-slate-500">Bongkar: ${formatDate(log.tanggal)} • Shift ${log.shift}</div>
+                                            ${log.tanggalKedatangan ? `<div class="text-[10px] font-bold text-blue-500 mt-0.5">Datang: ${formatDate(log.tanggalKedatangan)}</div>` : ''}
+                                        </div>
+                                        ${Components.Badge(log.tujuanSilo || 'Tidak ada data', 'primary')}
+                                    </div>
+                                    <div class="grid grid-cols-4 gap-2 text-center text-xs bg-slate-50 rounded-xl p-2 mb-3 border border-slate-100">
+                                        <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Masuk</div><div class="font-semibold text-slate-700">${formatTime(log.jamMasuk)}</div></div>
+                                        <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Release</div><div class="font-semibold text-slate-700">${formatTime(log.jamRelease)}</div></div>
+                                        <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Bongkar</div><div class="font-semibold text-slate-700">${formatTime(log.jamBongkar)}</div></div>
+                                        <div><div class="text-[8px] text-slate-400 font-bold uppercase mb-0.5">Selesai</div><div class="font-semibold text-slate-700">${formatTime(log.jamSelesai)}</div></div>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-2 text-center border-t border-slate-100 pt-3">
+                                        <div><div class="text-[9px] text-slate-400 font-bold uppercase">Awal</div><div class="font-black text-slate-700">${log.qtyAwal} <span class="text-[9px] font-medium opacity-50">kg</span></div></div>
+                                        <div class="border-l border-r border-slate-100"><div class="text-[9px] text-slate-400 font-bold uppercase">Akhir</div><div class="font-black text-slate-700">${log.qtyAkhir} <span class="text-[9px] font-medium opacity-50">kg</span></div></div>
+                                        <div><div class="text-[9px] text-rose-400 font-bold uppercase">Susut</div><div class="font-black text-rose-600">${Number(log.qtyAwal) - Number(log.qtyAkhir)} <span class="text-[9px] font-medium opacity-50">kg</span></div></div>
+                                    </div>
+                                    ${log.catatan ? `<div class="mt-3 pt-3 border-t border-slate-100"><p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Catatan</p><p class="text-xs font-semibold text-slate-700 italic">"${log.catatan}"</p></div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                div.innerHTML = contentHtml;
+                document.body.appendChild(div);
+                lucide.createIcons({root: div});
+
+                const contentBox = document.getElementById('dynamic-recap-content');
+                if (e && e.currentTarget) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const boxHeight = contentBox.offsetHeight;
+                    const windowHeight = window.innerHeight;
+                    
+                    let topPos = rect.bottom + 10;
+                    if (topPos + boxHeight > windowHeight - 20) {
+                        topPos = rect.top - boxHeight - 10;
+                    }
+                    if (topPos < 20) {
+                        topPos = Math.max(20, (windowHeight - boxHeight) / 2);
+                    }
+                    
+                    contentBox.style.top = topPos + 'px';
+                    contentBox.style.transformOrigin = topPos < rect.top ? 'bottom center' : 'top center';
+                } else {
+                    contentBox.style.top = '50%';
+                    contentBox.style.marginTop = `-${contentBox.offsetHeight / 2}px`;
+                }
+            },
+            
+            closeBulkyModal: () => { 
+                const modal = document.getElementById('dynamic-bulky-recap-modal');
+                if (modal) modal.remove();
+            },
             
             updateBulkyTujuan: (val) => {
                 app.state.bulkyForm.tujuanSilo = val;
