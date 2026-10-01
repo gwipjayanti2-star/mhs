@@ -1216,9 +1216,9 @@
                     let targetLogs = app.state.db.opnameLogs || [];
                     
                     if (filters.month) {
-                        targetLogs = targetLogs.filter(log => log.tanggal.startsWith(filters.month));
+                        targetLogs = targetLogs.filter(log => formatDateToYYYYMMDD(log.tanggal).startsWith(filters.month));
                     } else if (filters.date) {
-                        targetLogs = targetLogs.filter(log => log.tanggal === filters.date);
+                        targetLogs = targetLogs.filter(log => formatDateToYYYYMMDD(log.tanggal) === filters.date);
                     }
                     
                     if (filters.shift && filters.shift !== 'all') {
@@ -1228,6 +1228,7 @@
                     targetLogs.forEach(opnameLog => {
                         const dateStr = formatDate(opnameLog.tanggal);
                         const dayName = getDayName(opnameLog.tanggal);
+                        const opnameDateFormatted = formatDateToYYYYMMDD(opnameLog.tanggal);
                         
                         ['silo1', 'silo2', 'silo3', 'silo4', 'tapioka'].forEach(siloKey => {
                             const siloData = opnameLog[siloKey];
@@ -1238,8 +1239,10 @@
                                 if (pakai > 0 || totalMasuk > 0) {
                                     let relatedBulky = null;
                                     const matchingBulkyLogs = (app.state.db.bulkyLogs || []).filter(b => {
+                                        const bDatang = formatDateToYYYYMMDD(b.tanggalKedatangan);
+                                        const bBongkar = formatDateToYYYYMMDD(b.tanggal);
                                         return b.merk && b.merk.toLowerCase() === siloData.merk.toLowerCase() && 
-                                               (b.tanggalKedatangan <= opnameLog.tanggal || b.tanggal <= opnameLog.tanggal);
+                                               ((bDatang && bDatang <= opnameDateFormatted) || (bBongkar && bBongkar <= opnameDateFormatted));
                                     }).sort((a, b) => new Date(b.tanggalKedatangan || b.tanggal) - new Date(a.tanggalKedatangan || a.tanggal));
                                     
                                     if (matchingBulkyLogs.length > 0) {
