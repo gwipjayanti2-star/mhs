@@ -67,10 +67,30 @@
         const SILO_MERK_OPTIONS = { soft: ['B7', 'LM', 'MILA', 'FALCONILA', 'B7 MKL', 'LAINNYA'], medium: ['W3', 'LAINNYA'] };
         const SILO_LINES = { silo1: ['2.1', '4.1'], silo2: ['1.1', '3.1', '5.1', '2.1'], silo3: ['1.1', '2.1', '3.1', '5.1', '4.2'], silo4: ['2.2', '3.2', '5.2'] };
 
+        const formatGluten = (val) => {
+            if (val === undefined || val === null || val === '-' || val === '') return '-';
+            // Deteksi jika Google Sheets mengubah data jadi tanggal (ISO atau GMT string)
+            if (typeof val === 'string' && (val.match(/^\d{4}-\d{2}-\d{2}/) || val.includes('GMT') || val.includes('Time'))) {
+                const d = new Date(val);
+                if (!isNaN(d.getTime())) return `${d.getDate()}.${d.getMonth() + 1}`;
+            }
+            return val;
+        };
+
         const parseLines = (val) => {
-            if (Array.isArray(val)) return val;
-            if (typeof val === 'string') return val.split(/[|,]/).map(s => s.trim()).filter(Boolean);
-            return [];
+            if (!val) return [];
+            let arr = [];
+            if (Array.isArray(val)) arr = val;
+            else if (typeof val === 'string') arr = val.split(/[|,]/).map(s => s.trim());
+            
+            return arr.map(s => {
+                // Konversi kembali Tanggal auto-format dari Spreadsheet jadi format Line "Hari.Bulan" (contoh: 4.1)
+                if (typeof s === 'string' && (s.match(/^\d{4}-\d{2}-\d{2}/) || s.includes('GMT') || s.includes('Time'))) {
+                    const d = new Date(s);
+                    if (!isNaN(d.getTime())) return `${d.getDate()}.${d.getMonth() + 1}`;
+                }
+                return s;
+            }).filter(Boolean);
         };
 
         const getWeekNumber = (date) => {
@@ -114,7 +134,9 @@
         
         const formatDateToYYYYMMDD = (dateStr) => {
             if (!dateStr) return '';
+            if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr.substring(0, 10);
             const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
             return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         };
 
@@ -307,6 +329,43 @@
                 try {
                     const res = await fetch(`${API_URL}?action=getData`);
                     const data = await res.json();
+                    
+                    const unflattenObj = (raw) => {
+                        if (!raw) return raw;
+                        const obj = { ...raw };
+                        ['silo1', 'silo2', 'silo3', 'silo4', 'tapioka', 'gula'].forEach(silo => {
+                            if (!obj[silo] || typeof obj[silo] !== 'object') obj[silo] = {};
+                            Object.keys(obj).forEach(k => {
+                                if (k.startsWith(silo + '_')) obj[silo][k.replace(silo + '_', '')] = obj[k];
+                            });
+                            
+                            // Normalisasi Format Auto-Date dari Spreadsheet ke Angka Awal
+                            if (obj[silo].gluten !== undefined) obj[silo].gluten = formatGluten(obj[silo].gluten);
+                            if (obj[silo].lines !== undefined) obj[silo].lines = parseLines(obj[silo].lines);
+                            if (Array.isArray(obj[silo].batches)) {
+                                obj[silo].batches.forEach(b => { if(b.gluten !== undefined) b.gluten = formatGluten(b.gluten); });
+                            }
+                        });
+                        return obj;
+                    };
+
+                    if (Array.isArray(data.opnameLogs)) {
+                        data.opnameLogs = data.opnameLogs.map(log => {
+                            let unflatLog = unflattenObj(log);
+                            if (typeof unflatLog.serahTerima === 'string') {
+                                if (unflatLog.serahTerima.includes('|')) unflatLog.serahTerima = unflatLog.serahTerima.split('|').map(s => s.trim());
+                                else try { unflatLog.serahTerima = JSON.parse(unflatLog.serahTerima); } catch(e) { unflatLog.serahTerima = [unflatLog.serahTerima]; }
+                            }
+                            if (!Array.isArray(unflatLog.serahTerima)) unflatLog.serahTerima = [];
+                            while (unflatLog.serahTerima.length < 4) unflatLog.serahTerima.push('');
+                            return unflatLog;
+                        });
+                    }
+                    
+                    if (data.lastStock) {
+                        data.lastStock = unflattenObj(data.lastStock);
+                    }
+
                     this.state.db = data;
                     localStorage.setItem('mhs_db_cache', JSON.stringify(data));
                     if(['dashboard', 'recap', 'maintenance', 'bulky', 'trace'].includes(this.state.activeTab)) {
@@ -553,7 +612,7 @@
                 const db = app.state.db;
 
                 const StockCardHTML = (title, type, data, color) => {
-                    const currentBatch = data?.batches?.[0] || { qty: data?.akhir || 0, gluten: '-' };
+                    const currentBatch = data?.batches?.[0] || { qty: data?.akhir || 0, gluten: data?.gluten || '-' };
                     const nextBatch = data?.batches?.[1];
                     const maxCapacity = 85000;
                     const akhirVal = data?.akhir || 0;
@@ -671,22 +730,25 @@
                 const { shift: autoShift, date: autoDate } = getCurrentShiftInfo();
                 
                 if (!app.state.stockForm) {
-                    app.state.stockForm = {
-                        tanggal: autoDate, shift: autoShift,
-                        isExisting: false,
-                        silo1: { merk: db.lastStock?.silo1?.merk || '', customMerk: '', awal: db.lastStock?.silo1?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
-                        silo2: { merk: db.lastStock?.silo2?.merk || '', awal: db.lastStock?.silo2?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
-                        silo3: { merk: db.lastStock?.silo3?.merk || '', awal: db.lastStock?.silo3?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
-                        silo4: { merk: db.lastStock?.silo4?.merk || '', customMerk: '', awal: db.lastStock?.silo4?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
-                        tapioka: { merk: db.lastStock?.tapioka?.merk || '', awal: db.lastStock?.tapioka?.akhir || 0, masuk: '', akhir: '', lines: [] }, 
-                        gula: { merk: db.lastStock?.gula?.merk || '', akhir: db.lastStock?.gula?.akhir || 0 },
-                        catatanOpname: '', serahTerima: ['', '', '', '', '']
-                    };
+                    const formDateStr = formatDateToYYYYMMDD(autoDate);
+                    const existingRaw = db.opnameLogs?.find(log => formatDateToYYYYMMDD(log.tanggal) === formDateStr && String(log.shift) === String(autoShift));
                     
-                    const existingLog = db.opnameLogs?.find(log => log.tanggal === autoDate && String(log.shift) === String(autoShift));
-                    if (existingLog) {
-                        app.state.stockForm = JSON.parse(JSON.stringify(existingLog));
+                    if (existingRaw) {
+                        app.state.stockForm = JSON.parse(JSON.stringify(existingRaw));
+                        app.state.stockForm.tanggal = formDateStr;
                         app.state.stockForm.isExisting = true;
+                    } else {
+                        app.state.stockForm = {
+                            tanggal: formDateStr, shift: autoShift,
+                            isExisting: false,
+                            silo1: { merk: db.lastStock?.silo1?.merk || '', customMerk: '', awal: db.lastStock?.silo1?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: db.lastStock?.silo1?.gluten || '', lines: [] },
+                            silo2: { merk: db.lastStock?.silo2?.merk || '', awal: db.lastStock?.silo2?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: db.lastStock?.silo2?.gluten || '', lines: [] },
+                            silo3: { merk: db.lastStock?.silo3?.merk || '', awal: db.lastStock?.silo3?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: db.lastStock?.silo3?.gluten || '', lines: [] },
+                            silo4: { merk: db.lastStock?.silo4?.merk || '', customMerk: '', awal: db.lastStock?.silo4?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: db.lastStock?.silo4?.gluten || '', lines: [] },
+                            tapioka: { merk: db.lastStock?.tapioka?.merk || '', awal: db.lastStock?.tapioka?.akhir || 0, masuk: '', akhir: '', lines: [] }, 
+                            gula: { merk: db.lastStock?.gula?.merk || '', akhir: db.lastStock?.gula?.akhir || 0 },
+                            catatanOpname: '', serahTerima: ['', '', '', '', '']
+                        };
                     }
                 } 
                 
@@ -1352,20 +1414,23 @@
             checkExistingOpname: () => {
                 const fData = app.state.stockForm;
                 const logs = app.state.db.opnameLogs || [];
-                const existing = logs.find(l => l.tanggal === fData.tanggal && String(l.shift) === String(fData.shift));
+                const formDate = formatDateToYYYYMMDD(fData.tanggal);
+                
+                const existingRaw = logs.find(l => formatDateToYYYYMMDD(l.tanggal) === formDate && String(l.shift) === String(fData.shift));
 
-                if (existing) {
-                    app.state.stockForm = JSON.parse(JSON.stringify(existing));
+                if (existingRaw) {
+                    app.state.stockForm = JSON.parse(JSON.stringify(existingRaw));
+                    app.state.stockForm.tanggal = formDate; 
                     app.state.stockForm.isExisting = true;
                 } else {
                     const db = app.state.db;
                     app.state.stockForm = {
-                        tanggal: fData.tanggal, shift: fData.shift,
+                        tanggal: formDate, shift: fData.shift,
                         isExisting: false,
-                        silo1: { merk: db.lastStock?.silo1?.merk || '', customMerk: '', awal: db.lastStock?.silo1?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
-                        silo2: { merk: db.lastStock?.silo2?.merk || '', awal: db.lastStock?.silo2?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
-                        silo3: { merk: db.lastStock?.silo3?.merk || '', awal: db.lastStock?.silo3?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
-                        silo4: { merk: db.lastStock?.silo4?.merk || '', customMerk: '', awal: db.lastStock?.silo4?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: '', lines: [] },
+                        silo1: { merk: db.lastStock?.silo1?.merk || '', customMerk: '', awal: db.lastStock?.silo1?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: db.lastStock?.silo1?.gluten || '', lines: [] },
+                        silo2: { merk: db.lastStock?.silo2?.merk || '', awal: db.lastStock?.silo2?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: db.lastStock?.silo2?.gluten || '', lines: [] },
+                        silo3: { merk: db.lastStock?.silo3?.merk || '', awal: db.lastStock?.silo3?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: db.lastStock?.silo3?.gluten || '', lines: [] },
+                        silo4: { merk: db.lastStock?.silo4?.merk || '', customMerk: '', awal: db.lastStock?.silo4?.akhir || 0, masukZak: '', masukBulky: '', akhir: '', gluten: db.lastStock?.silo4?.gluten || '', lines: [] },
                         tapioka: { merk: db.lastStock?.tapioka?.merk || '', awal: db.lastStock?.tapioka?.akhir || 0, masuk: '', akhir: '', lines: [] }, 
                         gula: { merk: db.lastStock?.gula?.merk || '', akhir: db.lastStock?.gula?.akhir || 0 },
                         catatanOpname: '', serahTerima: ['', '', '', '', '']
@@ -1645,10 +1710,10 @@
                 };
 
                 const newStockData = {
-                    silo1: { akhir: fData.silo1.akhir || fData.silo1.awal, merk: fData.silo1.merk === 'LAINNYA' ? fData.silo1.customMerk : fData.silo1.merk, batches: calculateNewBatches('silo1') },
-                    silo2: { akhir: fData.silo2.akhir || fData.silo2.awal, merk: fData.silo2.merk, batches: calculateNewBatches('silo2') },
-                    silo3: { akhir: fData.silo3.akhir || fData.silo3.awal, merk: fData.silo3.merk, batches: calculateNewBatches('silo3') },
-                    silo4: { akhir: fData.silo4.akhir || fData.silo4.awal, merk: fData.silo4.merk === 'LAINNYA' ? fData.silo4.customMerk : fData.silo4.merk, batches: calculateNewBatches('silo4') },
+                    silo1: { akhir: fData.silo1.akhir || fData.silo1.awal, merk: fData.silo1.merk === 'LAINNYA' ? fData.silo1.customMerk : fData.silo1.merk, gluten: fData.silo1.gluten, batches: calculateNewBatches('silo1') },
+                    silo2: { akhir: fData.silo2.akhir || fData.silo2.awal, merk: fData.silo2.merk, gluten: fData.silo2.gluten, batches: calculateNewBatches('silo2') },
+                    silo3: { akhir: fData.silo3.akhir || fData.silo3.awal, merk: fData.silo3.merk, gluten: fData.silo3.gluten, batches: calculateNewBatches('silo3') },
+                    silo4: { akhir: fData.silo4.akhir || fData.silo4.awal, merk: fData.silo4.merk === 'LAINNYA' ? fData.silo4.customMerk : fData.silo4.merk, gluten: fData.silo4.gluten, batches: calculateNewBatches('silo4') },
                     tapioka: { akhir: fData.tapioka.akhir || fData.tapioka.awal, merk: fData.tapioka.merk },
                     gula: { akhir: fData.gula.akhir, merk: fData.gula.merk }
                 };
