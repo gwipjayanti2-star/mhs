@@ -1,5 +1,5 @@
-const CACHE_NAME = 'mhs-pro-cache-v6'; // Cache dinaikkan ke v6 untuk memicu pembaruan
-// Hanya cache file lokal yang dijamin ada agar proses install tidak pernah gagal
+const CACHE_NAME = 'mhs-pro-cache-v8'; // WAJIB NAIK ANGKA (v9, v10, dst) SETIAP KALI UPDATE INDEX.HTML
+
 const urlsToCache = [
   './',
   './index.html',
@@ -7,14 +7,13 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
-  self.skipWaiting(); // Memaksa SW baru untuk segera aktif
+  self.skipWaiting(); // Memaksa SW baru untuk segera aktif tanpa menunggu
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache v6');
+        console.log('Cache di-install:', CACHE_NAME);
         return cache.addAll(urlsToCache);
       })
-      .catch(err => console.error('Cache install error:', err))
   );
 });
 
@@ -23,49 +22,59 @@ self.addEventListener('activate', event => {
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          // Hapus cache versi lama (termasuk v5 yang bermasalah)
+          // Hapus semua cache lama yang tidak sama dengan CACHE_NAME saat ini
           if (cacheName !== CACHE_NAME) {
+            console.log('Menghapus cache lama secara otomatis:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => self.clients.claim()) // Segera kontrol semua halaman terbuka
+    })
+    .then(() => self.clients.claim()) // Langsung kontrol semua tab/halaman yang terbuka
   );
 });
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+  
+  // Jangan cache request ke Google Script
+  if (event.request.url.includes('script.google.com')) return;
 
-  // Jangan pernah cache permintaan ke API Google Script agar data selalu real-time
-  if (event.request.url.includes('script.google.com')) {
-    return;
-  }
-
-  // STRATEGI BARU: Network First, Fallback to Cache
-  // 1. Selalu coba ambil file terbaru dari server/jaringan terlebih dahulu
   event.respondWith(
-    fetch(event.request)
-      .then(networkResponse => {
-        // Jika berhasil mengambil dari jaringan, simpan versi terbarunya ke dalam Cache
-        if (networkResponse && (networkResponse.status === 200 || networkResponse.status === 0)) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME)
-            .then(cache => {
-              cache.put(event.request, responseToCache);
-            });
+    (async () => {
+      // 1. STRATEGI ANTI-NYANGKUT (Khusus untuk file HTML / Tampilan Utama)
+      // Mendeteksi saat user membuka aplikasi (mode navigate)
+      if (event.request.mode === 'navigate') {
+        try {
+          // PAKSA ambil dari server internet, abaikan cache bawaan browser HP (cache: 'reload')
+          const networkResponse = await fetch(event.request.url, { cache: 'reload' });
+          
+          // Simpan versi paling baru ke dalam cache
+          if (networkResponse && networkResponse.status === 200) {
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          }
+        } catch (error) {
+          // Jika HP benar-benar offline (tidak ada sinyal internet sama sekali), buka dari cache
+          const cachedResponse = await caches.match(event.request);
+          if (cachedResponse) return cachedResponse;
         }
-        // Kembalikan file terbaru ke tampilan aplikasi
+      }
+
+      // 2. STRATEGI UNTUK FILE LAIN (Gambar, Icon, Manifest) -> Network First, Fallback Cache
+      try {
+        const networkResponse = await fetch(event.request);
+        if (networkResponse && (networkResponse.status === 200 || networkResponse.status === 0)) {
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(event.request, networkResponse.clone());
+        }
         return networkResponse;
-      })
-      .catch(() => {
-        // 2. Jika gagal (karena offline/tidak ada sinyal), barulah ambil dari Cache
-        return caches.match(event.request)
-          .then(cacheResponse => {
-            if (cacheResponse) {
-              return cacheResponse;
-            }
-            console.log('Offline dan file tidak ada di cache:', event.request.url);
-          });
-      })
+      } catch (error) {
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) return cachedResponse;
+        console.log('Offline dan tidak ada di cache:', event.request.url);
+      }
+    })()
   );
 });
